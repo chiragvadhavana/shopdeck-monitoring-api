@@ -12,6 +12,12 @@ load_dotenv()
 
 # MongoDB configuration
 MONGODB_URL = os.getenv("MONGODB_URL", "")
+
+# Fix SSL issues in Vercel serverless environment
+if MONGODB_URL and "tlsAllowInvalidCertificates" not in MONGODB_URL:
+    separator = "&" if "?" in MONGODB_URL else "?"
+    MONGODB_URL = f"{MONGODB_URL}{separator}tlsAllowInvalidCertificates=true"
+
 DATABASE_NAME = "shopdeck_monitoring"
 COLLECTION_NAME = "purchases"
 
