@@ -1,0 +1,1 @@
+# FastAPI ShopDeck Monitoring API

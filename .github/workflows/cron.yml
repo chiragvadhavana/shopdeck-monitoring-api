@@ -1,0 +1,56 @@
+name: ShopDeck Purchase Monitoring
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+      
+    - name: Install dependencies
+      run: uv sync
+      
+    - name: Install Playwright browsers
+      run: uv run playwright install chromium
+      
+    - name: Run monitoring
+      env:
+        MONGODB_URL: ${{ secrets.MONGODB_URL }}
+        PRODUCT_URL: ${{ secrets.PRODUCT_URL }}
+        INTERVAL_MINUTES: ${{ secrets.INTERVAL_MINUTES || '60' }}
+      run: |
+        uv run python -c "
+        import os
+        from app.services import fetch_purchases, store_purchases
+        
+        product_url = os.getenv('PRODUCT_URL')
+        interval_minutes = int(os.getenv('INTERVAL_MINUTES', '60'))
+        
+        if not product_url:
+            print('❌ PRODUCT_URL not set')
+            exit(1)
+            
+        print(f'🔍 Monitoring: {product_url}')
+        purchases = fetch_purchases(product_url)
+        
+        if purchases:
+            stored = store_purchases(purchases, interval_minutes)
+            print(f'✅ Found: {len(purchases)} | Stored: {stored}')
+        else:
+            print('⚠️ No purchases found')
+        "
