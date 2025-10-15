@@ -6,7 +6,7 @@ import re
 import random
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 from .database import get_sync_collection
 
 
@@ -16,7 +16,7 @@ def parse_minutes(time_str: str) -> Optional[int]:
     return int(match.group(1)) if match else None
 
 
-def fetch_purchases(product_url: str) -> Optional[List[Dict]]:
+async def fetch_purchases(product_url: str) -> Optional[List[Dict]]:
     """Fetch recent purchases from product page using Playwright."""
     api_data = None
     user_agents = [
@@ -26,25 +26,25 @@ def fetch_purchases(product_url: str) -> Optional[List[Dict]]:
     ]
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(user_agent=random.choice(user_agents))
-            page = context.new_page()
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(user_agent=random.choice(user_agents))
+            page = await context.new_page()
 
-            def handle_response(response):
+            async def handle_response(response):
                 nonlocal api_data
                 if "/api/prashth/page/" in response.url and response.status == 200:
                     try:
-                        data = response.json()
+                        data = await response.json()
                         if data.get("code") == 200:
                             api_data = data
                     except:
                         pass
 
             page.on("response", handle_response)
-            page.goto(product_url, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(2000)
-            browser.close()
+            await page.goto(product_url, wait_until="networkidle", timeout=30000)
+            await page.wait_for_timeout(2000)
+            await browser.close()
     except Exception as e:
         print(f"❌ Error fetching purchases: {e}")
         return None

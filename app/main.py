@@ -47,7 +47,7 @@ async def trigger_monitoring():
 
     try:
         # Fetch purchases from the product page
-        purchases = fetch_purchases(PRODUCT_URL)
+        purchases = await fetch_purchases(PRODUCT_URL)
 
         if not purchases:
             return TriggerResponse(
