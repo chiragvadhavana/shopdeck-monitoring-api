@@ -1,276 +1,214 @@
-# ShopDeck Monitoring API
+# ShopDeck Purchase Monitoring API
 
-A FastAPI backend for monitoring ShopDeck product purchases with automatic data collection and CSV export functionality.
+**Super simple FastAPI backend for monitoring ShopDeck product purchases. Everything in one file!**
 
-## 🏗️ Architecture
+## 🎯 What It Does
 
-- **FastAPI**: REST API backend
-- **MongoDB Atlas**: Database storage
-- **Vercel**: API hosting (serverless)
-- **GitHub Actions**: Automated cron job (every 5 minutes)
-- **Playwright**: Web scraping for purchase data
+- **Scrapes** recent purchases from ShopDeck product pages
+- **Filters** ONLY purchases marked as "X minutes ago" (e.g., "5 minutes ago", "45 minutes ago")
+- **Stores** purchases in MongoDB Atlas (only within your specified time window)
+- **Exports** data as CSV
+- **Auto-runs** every 5 minutes via GitHub Actions
 
 ## 📁 Project Structure
 
 ```
 shopdeck-monitoring-api/
-├── app/
-│   ├── __init__.py          # Package init
-│   ├── main.py              # FastAPI application
-│   ├── database.py          # MongoDB connection
-│   ├── models.py            # Pydantic models
-│   └── services.py          # Business logic
-├── .github/workflows/
-│   └── cron.yml             # GitHub Actions cron job
+├── api.py                   # 🔥 Single file with everything!
+├── test_scrape.py           # Test script to verify scraping works
 ├── pyproject.toml           # Dependencies
-├── vercel.json              # Vercel configuration
-├── env.example              # Environment variables template
+├── vercel.json              # Vercel deployment config
+├── .github/workflows/
+│   └── cron.yml             # Auto-run every 5 minutes
 └── README.md                # This file
 ```
 
 ## 🚀 Quick Setup
 
-### ✅ Setup Progress
+### 1. Prerequisites
 
-- [x] **GitHub Repository**: Created and pushed to `chiragvadhavana/shopdeck-monitoring-api`
-- [x] **GitHub Secrets**: Added `MONGODB_URL` and `PRODUCT_URL` to repository secrets
-- [x] **MongoDB**: Connection string configured
-- [ ] **Vercel Deployment**: Setup in progress
-- [ ] **GitHub Actions**: Cron job configuration pending
+- Python 3.8+
+- MongoDB Atlas account (free tier)
+- Vercel account (free tier)
+- GitHub account
 
-### 1. Environment Variables
+### 2. MongoDB Setup
 
-Copy `env.example` and set your values:
+1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+2. Create a free cluster
+3. **IMPORTANT**: Go to "Network Access" → Add IP Address → **Allow Access from Anywhere (0.0.0.0/0)**
+4. Create a database user with password
+5. Get your connection string (looks like `mongodb+srv://username:password@cluster...`)
+
+### 3. Local Development
 
 ```bash
-# MongoDB connection string (from MongoDB Atlas)
-MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/shopdeck_monitoring?retryWrites=true&w=majority&appName=ClusterName
+# Clone the repo
+git clone https://github.com/YOUR_USERNAME/shopdeck-monitoring-api.git
+cd shopdeck-monitoring-api
 
-# Product URL to monitor
-PRODUCT_URL=https://your-product-url.com
-
-# Monitoring interval in minutes (default: 60)
+# Create .env file
+cat > .env << EOF
+MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/
+PRODUCT_URL=https://your-shopdeck-product-url.com
 INTERVAL_MINUTES=60
-```
+EOF
 
-### 2. Local Development
-
-```bash
 # Install dependencies
 uv sync
 
 # Install Playwright browsers
 uv run playwright install chromium
 
+# Test scraping first
+uv run python test_scrape.py
+
 # Run the API
-uv run uvicorn app.main:app --reload
+uv run uvicorn api:app --reload
 ```
 
-### 3. Deploy to Vercel
+### 4. Test Your API
 
-#### Step 1: Connect Repository
+```bash
+# Health check
+curl http://localhost:8000/
+
+# Trigger monitoring
+curl -X POST http://localhost:8000/trigger
+
+# Get stats
+curl http://localhost:8000/stats
+
+# Export CSV
+curl http://localhost:8000/export -o purchases.csv
+```
+
+### 5. Deploy to Vercel
+
 1. Go to [vercel.com](https://vercel.com) and sign in with GitHub
-2. Click **"New Project"**
-3. Import your repository: `chiragvadhavana/shopdeck-monitoring-api`
-4. Click **"Deploy"** (Vercel will auto-detect it's a Python project)
-
-#### Step 2: Configure Environment Variables
-1. Go to your project dashboard on Vercel
-2. Click **"Settings"** → **"Environment Variables"**
-3. Add these variables:
-
-   | Name | Value | Environment |
-   |------|-------|-------------|
-   | `MONGODB_URL` | Your MongoDB connection string | Production, Preview, Development |
-   | `PRODUCT_URL` | Your product URL to monitor | Production, Preview, Development |
-   | `INTERVAL_MINUTES` | `60` (optional) | Production, Preview, Development |
-
-4. Click **"Save"** for each variable
-
-#### Step 3: Redeploy
-1. Go to **"Deployments"** tab
-2. Click the **"..."** menu on the latest deployment
-3. Click **"Redeploy"** to apply the new environment variables
-
-#### Step 4: Test Your API
-Your API will be available at: `https://your-project-name.vercel.app`
-
-### 4. Setup GitHub Actions Cron
-
-1. **Go to GitHub repo → Settings → Secrets and variables → Actions**
-2. **Add repository secrets**:
-
+2. Click "New Project" → Import your repository
+3. Add environment variables in Vercel dashboard:
    - `MONGODB_URL`: Your MongoDB connection string
-   - `PRODUCT_URL`: Product URL to monitor
-   - `INTERVAL_MINUTES`: Monitoring interval (optional, default: 60)
+   - `PRODUCT_URL`: Your ShopDeck product URL
+   - `INTERVAL_MINUTES`: `60` (or whatever you want, max 59 for minute-based tracking)
+4. Deploy!
 
-3. **Cron job runs every 5 minutes automatically**
+Your API will be at: `https://your-project.vercel.app`
+
+### 6. Setup GitHub Actions (Auto-Monitoring)
+
+1. Go to your GitHub repo → Settings → Secrets and variables → Actions
+2. Add these secrets:
+   - `MONGODB_URL`: Your MongoDB connection string
+   - `PRODUCT_URL`: Your ShopDeck product URL
+   - `INTERVAL_MINUTES`: `60` (optional, defaults to 60)
+3. The cron job runs automatically every 5 minutes! ✅
 
 ## 📡 API Endpoints
 
-### Health Check
+| Endpoint   | Method | Description                    |
+| ---------- | ------ | ------------------------------ |
+| `/`        | GET    | Health check + database status |
+| `/trigger` | POST   | Manually trigger monitoring    |
+| `/export`  | GET    | Download purchases as CSV      |
+| `/stats`   | GET    | Get database statistics        |
 
-```http
-GET /
-```
-
-Returns API health status and database connection.
-
-### Manual Trigger
-
-```http
-POST /trigger
-```
-
-Manually trigger purchase monitoring.
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Monitoring completed successfully",
-  "records_found": 5,
-  "records_stored": 3
-}
-```
-
-### Export CSV
-
-```http
-GET /export
-```
-
-Download all purchases as CSV file.
-
-### Statistics
-
-```http
-GET /stats
-```
-
-Get basic statistics about stored purchases.
-
-## 🔧 Configuration
+## ⚙️ Configuration
 
 ### Environment Variables
 
 | Variable           | Description                       | Required | Default |
 | ------------------ | --------------------------------- | -------- | ------- |
-| `MONGODB_URL`      | MongoDB Atlas connection string   | ✅       | -       |
-| `PRODUCT_URL`      | ShopDeck product URL to monitor   | ✅       | -       |
-| `INTERVAL_MINUTES` | Time window for purchase tracking | ❌       | 60      |
+| `MONGODB_URL`      | MongoDB connection string         | ✅       | -       |
+| `PRODUCT_URL`      | ShopDeck product page URL         | ✅       | -       |
+| `INTERVAL_MINUTES` | Time window for tracking (max 59) | ❌       | 60      |
 
-### Cron Schedule
+### How the Time Window Works
 
-The GitHub Actions cron job runs every 5 minutes:
+**IMPORTANT**: Only purchases with "X minutes ago" format are tracked!
 
-```yaml
-schedule:
-  - cron: "*/5 * * * *"
-```
+- If `INTERVAL_MINUTES=30`, only purchases within last 30 minutes are stored
+- If `INTERVAL_MINUTES=60`, only purchases within last 60 minutes are stored
+- Purchases marked as "an hour ago", "2 hours ago", etc. are **IGNORED** ❌
+- No duplicate checking - each run stores fresh data
+
+**Example:**
+
+If you set `INTERVAL_MINUTES=40` and the scraper finds:
+
+- "5 minutes ago" → ✅ Stored (within 40 minutes)
+- "35 minutes ago" → ✅ Stored (within 40 minutes)
+- "45 minutes ago" → ❌ NOT stored (outside 40 minutes)
+- "an hour ago" → ❌ NOT stored (not minute-based format)
 
 ## 🗄️ Database Schema
 
-MongoDB collection: `purchases`
+MongoDB Collection: `shopdeck_monitoring.purchases`
 
 ```json
 {
   "_id": "ObjectId",
-  "product_name": "string",
-  "product_id": "string",
-  "customer_location": "string",
-  "purchase_date": "YYYY-MM-DD",
-  "purchase_time": "HH:MM",
-  "created_at": "datetime"
+  "product_name": "Product Name",
+  "product_id": "abc123",
+  "customer_location": "Customer in City",
+  "purchase_date": "2025-10-16",
+  "purchase_time": "14:30",
+  "created_at": "2025-10-16T14:35:22"
 }
 ```
 
-## 🔍 How It Works
+## 🔧 Troubleshooting
 
-1. **GitHub Actions** runs every 5 minutes
-2. **Playwright** scrapes the product page for recent purchases
-3. **Filters** purchases with "X minutes ago" format within time window
-4. **Stores** new purchases in MongoDB Atlas
-5. **API** provides endpoints for manual trigger and CSV export
+### MongoDB Connection Failed
 
-## 🛠️ Development
+- Check your connection string format
+- **Make sure you allowed access from anywhere (0.0.0.0/0)** in MongoDB Network Access
+- Verify username/password are correct
 
-### Local Testing
+### No Purchases Stored
 
-```bash
-# Test the API locally
-uv run uvicorn app.main:app --reload --port 8000
+- Check if purchases are in "X minutes ago" format (not "an hour ago")
+- Verify they're within your `INTERVAL_MINUTES` window
+- Test with `test_scrape.py` first to see what's being scraped
 
-# Test endpoints
-curl http://localhost:8000/
-curl -X POST http://localhost:8000/trigger
-curl http://localhost:8000/export
-```
+### Vercel Deployment Issues
 
-### Manual Cron Test
+- Make sure environment variables are set in Vercel dashboard
+- Check Vercel logs for errors
+- MongoDB Atlas must allow connections from anywhere
 
-```bash
-# Test the monitoring script directly
-uv run python -c "
-from app.services import fetch_purchases, store_purchases
-import os
+## 📊 GitHub Actions Monitoring
 
-product_url = 'YOUR_PRODUCT_URL'
-purchases = fetch_purchases(product_url)
-if purchases:
-    stored = store_purchases(purchases, 60)
-    print(f'Found: {len(purchases)}, Stored: {stored}')
-"
-```
+The cron job (`*/5 * * * *`) runs every 5 minutes automatically:
 
-## 📊 Monitoring
+1. Scrapes the product page
+2. Filters for "X minutes ago" purchases
+3. Stores in MongoDB if within time window
+4. Logs results in GitHub Actions tab
 
-- **Vercel**: Check deployment status and logs
-- **GitHub Actions**: Monitor cron job runs
-- **MongoDB Atlas**: View stored data
-- **API**: Use `/stats` endpoint for data insights
+## 🎉 That's It!
 
-## 🔒 Security
+Everything is now super simple:
 
-- MongoDB connection string stored as environment variable
-- No sensitive data in code
-- Vercel handles HTTPS automatically
-- GitHub Actions secrets for cron job
+- ✅ Single `api.py` file with all logic
+- ✅ Only tracks minute-based purchases
+- ✅ No duplicate checking (simple inserts)
+- ✅ Works on Vercel + GitHub Actions
+- ✅ Free tier everything!
 
-## 🚨 Troubleshooting
+## 📝 Files Created
 
-### Common Issues
+- `api.py` - Main API (replaced old `app/` folder)
+- `test_scrape.py` - Quick test script
+- `vercel.json` - Points to `api.py`
+- `.github/workflows/cron.yml` - Uses `api.py`
 
-1. **MongoDB Connection Failed**
+## 🚨 What Changed from Complex Version
 
-   - Check connection string format
-   - Verify network access in MongoDB Atlas
+- ✅ Everything in ONE file (`api.py`)
+- ✅ No separate `models.py`, `services.py`, `database.py`
+- ✅ No duplicate checking (simpler, faster)
+- ✅ Exact same logic as the perfect SQLite version
+- ✅ Only minute-based tracking (no hours/days)
 
-2. **No Purchases Found**
-
-   - Verify PRODUCT_URL is correct
-   - Check if product page structure changed
-
-3. **Cron Job Not Running**
-
-   - Check GitHub Actions secrets
-   - Verify cron schedule syntax
-
-4. **Vercel Deployment Failed**
-   - Check environment variables
-   - Verify Python version compatibility
-
-### Logs
-
-- **Vercel**: Dashboard → Functions → View logs
-- **GitHub Actions**: Repository → Actions tab
-- **Local**: Console output when running locally
-
-## 📝 Notes
-
-- Keeps original SQLite version intact
-- MongoDB version is completely separate
-- All free tiers used (Vercel, GitHub Actions, MongoDB Atlas)
-- Automatic duplicate prevention in database
-
+Happy monitoring! 🎉
