@@ -62,6 +62,7 @@ uv run uvicorn app.main:app --reload
 
 1. **Connect GitHub repo to Vercel**
 2. **Set environment variables in Vercel dashboard**:
+
    - `MONGODB_URL`
    - `PRODUCT_URL`
    - `INTERVAL_MINUTES` (optional)
@@ -72,6 +73,7 @@ uv run uvicorn app.main:app --reload
 
 1. **Go to GitHub repo → Settings → Secrets and variables → Actions**
 2. **Add repository secrets**:
+
    - `MONGODB_URL`: Your MongoDB connection string
    - `PRODUCT_URL`: Product URL to monitor
    - `INTERVAL_MINUTES`: Monitoring interval (optional, default: 60)
@@ -81,18 +83,23 @@ uv run uvicorn app.main:app --reload
 ## 📡 API Endpoints
 
 ### Health Check
+
 ```http
 GET /
 ```
+
 Returns API health status and database connection.
 
 ### Manual Trigger
+
 ```http
 POST /trigger
 ```
+
 Manually trigger purchase monitoring.
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -103,33 +110,38 @@ Manually trigger purchase monitoring.
 ```
 
 ### Export CSV
+
 ```http
 GET /export
 ```
+
 Download all purchases as CSV file.
 
 ### Statistics
+
 ```http
 GET /stats
 ```
+
 Get basic statistics about stored purchases.
 
 ## 🔧 Configuration
 
 ### Environment Variables
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `MONGODB_URL` | MongoDB Atlas connection string | ✅ | - |
-| `PRODUCT_URL` | ShopDeck product URL to monitor | ✅ | - |
-| `INTERVAL_MINUTES` | Time window for purchase tracking | ❌ | 60 |
+| Variable           | Description                       | Required | Default |
+| ------------------ | --------------------------------- | -------- | ------- |
+| `MONGODB_URL`      | MongoDB Atlas connection string   | ✅       | -       |
+| `PRODUCT_URL`      | ShopDeck product URL to monitor   | ✅       | -       |
+| `INTERVAL_MINUTES` | Time window for purchase tracking | ❌       | 60      |
 
 ### Cron Schedule
 
 The GitHub Actions cron job runs every 5 minutes:
+
 ```yaml
 schedule:
-  - cron: '*/5 * * * *'
+  - cron: "*/5 * * * *"
 ```
 
 ## 🗄️ Database Schema
@@ -140,7 +152,7 @@ MongoDB collection: `purchases`
 {
   "_id": "ObjectId",
   "product_name": "string",
-  "product_id": "string", 
+  "product_id": "string",
   "customer_location": "string",
   "purchase_date": "YYYY-MM-DD",
   "purchase_time": "HH:MM",
@@ -205,14 +217,17 @@ if purchases:
 ### Common Issues
 
 1. **MongoDB Connection Failed**
+
    - Check connection string format
    - Verify network access in MongoDB Atlas
 
 2. **No Purchases Found**
+
    - Verify PRODUCT_URL is correct
    - Check if product page structure changed
 
 3. **Cron Job Not Running**
+
    - Check GitHub Actions secrets
    - Verify cron schedule syntax
 
