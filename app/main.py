@@ -29,8 +29,8 @@ async def health_check():
         collection = get_async_collection()
         await collection.find_one({})
         db_status = "connected"
-    except Exception:
-        db_status = "disconnected"
+    except Exception as e:
+        db_status = f"disconnected: {str(e)}"
 
     return HealthResponse(
         status="healthy", database=db_status, timestamp=datetime.now()
@@ -87,6 +87,17 @@ async def export_csv():
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error exporting data: {str(e)}")
+
+
+@app.get("/debug")
+async def debug_info():
+    """Debug endpoint to check environment variables."""
+    return {
+        "mongodb_url_set": bool(os.getenv("MONGODB_URL")),
+        "mongodb_url_preview": os.getenv("MONGODB_URL", "")[:50] + "..." if os.getenv("MONGODB_URL") else "Not set",
+        "product_url_set": bool(os.getenv("PRODUCT_URL")),
+        "interval_minutes": os.getenv("INTERVAL_MINUTES"),
+    }
 
 
 @app.get("/stats")
