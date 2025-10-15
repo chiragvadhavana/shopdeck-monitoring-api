@@ -1,6 +1,5 @@
 """
-MongoDB database connection and configuration.
-Simple and optimized for Vercel serverless environment.
+MongoDB database connection - Simple and clean.
 """
 
 import os
@@ -8,16 +7,11 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
-# Load environment variables (for local development)
+# Load environment variables
 load_dotenv()
 
 # MongoDB configuration
 MONGODB_URL = os.getenv("MONGODB_URL", "")
-
-# Fix SSL issues in Vercel serverless environment
-if MONGODB_URL and "tlsAllowInvalidCertificates" not in MONGODB_URL:
-    separator = "&" if "?" in MONGODB_URL else "?"
-    MONGODB_URL = f"{MONGODB_URL}{separator}tlsAllowInvalidCertificates=true"
 DATABASE_NAME = "shopdeck_monitoring"
 COLLECTION_NAME = "purchases"
 

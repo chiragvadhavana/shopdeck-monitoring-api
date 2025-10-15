@@ -1,5 +1,6 @@
 """
 FastAPI main application for ShopDeck purchase monitoring.
+Clean and simple version.
 """
 
 import os
@@ -16,7 +17,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Get product URL from environment
+# Get environment variables
 PRODUCT_URL = os.getenv("PRODUCT_URL", "")
 INTERVAL_MINUTES = int(os.getenv("INTERVAL_MINUTES", "60"))
 
@@ -25,7 +26,6 @@ INTERVAL_MINUTES = int(os.getenv("INTERVAL_MINUTES", "60"))
 async def health_check():
     """Health check endpoint."""
     try:
-        # Test database connection
         collection = get_async_collection()
         await collection.find_one({})
         db_status = "connected"
@@ -46,7 +46,6 @@ async def trigger_monitoring():
         )
 
     try:
-        # Fetch purchases from the product page
         purchases = await fetch_purchases(PRODUCT_URL)
 
         if not purchases:
@@ -57,12 +56,11 @@ async def trigger_monitoring():
                 records_stored=0,
             )
 
-        # Store purchases in database
         stored_count = store_purchases(purchases, INTERVAL_MINUTES)
 
         return TriggerResponse(
             success=True,
-            message=f"Monitoring completed successfully",
+            message="Monitoring completed successfully",
             records_found=len(purchases),
             records_stored=stored_count,
         )
@@ -78,26 +76,13 @@ async def export_csv():
     """Export all purchases as CSV file."""
     try:
         csv_data = export_to_csv_data()
-
         return PlainTextResponse(
             content=csv_data,
             media_type="text/csv",
             headers={"Content-Disposition": "attachment; filename=purchases.csv"},
         )
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error exporting data: {str(e)}")
-
-
-@app.get("/debug")
-async def debug_info():
-    """Debug endpoint to check environment variables."""
-    return {
-        "mongodb_url_set": bool(os.getenv("MONGODB_URL")),
-        "mongodb_url_preview": os.getenv("MONGODB_URL", "")[:50] + "..." if os.getenv("MONGODB_URL") else "Not set",
-        "product_url_set": bool(os.getenv("PRODUCT_URL")),
-        "interval_minutes": os.getenv("INTERVAL_MINUTES"),
-    }
 
 
 @app.get("/stats")
@@ -105,13 +90,9 @@ async def get_stats():
     """Get basic statistics about stored purchases."""
     try:
         collection = get_async_collection()
-
         total_count = await collection.count_documents({})
-
-        # Get unique products
         unique_products = await collection.distinct("product_id")
-
-        # Get date range
+        
         oldest = await collection.find_one({}, sort=[("purchase_date", 1)])
         newest = await collection.find_one({}, sort=[("purchase_date", -1)])
 
@@ -123,6 +104,5 @@ async def get_stats():
                 "newest": newest["purchase_date"] if newest else None,
             },
         }
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}")
