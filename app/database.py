@@ -19,22 +19,22 @@ MONGODB_URL = os.getenv(
 DATABASE_NAME = "shopdeck_monitoring"
 COLLECTION_NAME = "purchases"
 
-# Async client for FastAPI
-async_client = AsyncIOMotorClient(MONGODB_URL)
-async_db = async_client[DATABASE_NAME]
-async_collection = async_db[COLLECTION_NAME]
-
-# Sync client for cron jobs
-sync_client = MongoClient(MONGODB_URL)
-sync_db = sync_client[DATABASE_NAME]
-sync_collection = sync_db[COLLECTION_NAME]
+# Global clients (lazy initialization)
+async_client = None
+sync_client = None
 
 
 def get_async_collection():
     """Get async MongoDB collection for FastAPI endpoints."""
-    return async_collection
+    global async_client
+    if async_client is None:
+        async_client = AsyncIOMotorClient(MONGODB_URL)
+    return async_client[DATABASE_NAME][COLLECTION_NAME]
 
 
 def get_sync_collection():
     """Get sync MongoDB collection for cron jobs."""
-    return sync_collection
+    global sync_client
+    if sync_client is None:
+        sync_client = MongoClient(MONGODB_URL)
+    return sync_client[DATABASE_NAME][COLLECTION_NAME]
