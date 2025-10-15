@@ -26,10 +26,10 @@ sync_client = None
 
 def get_async_collection():
     """Get async MongoDB collection for FastAPI endpoints."""
-    global async_client
-    if async_client is None:
-        async_client = AsyncIOMotorClient(MONGODB_URL)
-    return async_client[DATABASE_NAME][COLLECTION_NAME]
+    # Create a new client for each request in serverless environment
+    # This prevents "Event loop is closed" errors in Vercel
+    client = AsyncIOMotorClient(MONGODB_URL)
+    return client[DATABASE_NAME][COLLECTION_NAME]
 
 
 def get_sync_collection():
