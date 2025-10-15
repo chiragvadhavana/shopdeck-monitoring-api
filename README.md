@@ -30,13 +30,21 @@ shopdeck-monitoring-api/
 
 ## 🚀 Quick Setup
 
+### ✅ Setup Progress
+
+- [x] **GitHub Repository**: Created and pushed to `chiragvadhavana/shopdeck-monitoring-api`
+- [x] **GitHub Secrets**: Added `MONGODB_URL` and `PRODUCT_URL` to repository secrets
+- [x] **MongoDB**: Connection string configured
+- [ ] **Vercel Deployment**: Setup in progress
+- [ ] **GitHub Actions**: Cron job configuration pending
+
 ### 1. Environment Variables
 
 Copy `env.example` and set your values:
 
 ```bash
 # MongoDB connection string (from MongoDB Atlas)
-MONGODB_URL=mongodb+srv://technomad625_db_user:tfDmvELR50SgA0sa@testcluster.qzqdndu.mongodb.net/shopdeck_monitoring?retryWrites=true&w=majority&appName=TestCluster
+MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/shopdeck_monitoring?retryWrites=true&w=majority&appName=ClusterName
 
 # Product URL to monitor
 PRODUCT_URL=https://your-product-url.com
@@ -60,14 +68,32 @@ uv run uvicorn app.main:app --reload
 
 ### 3. Deploy to Vercel
 
-1. **Connect GitHub repo to Vercel**
-2. **Set environment variables in Vercel dashboard**:
+#### Step 1: Connect Repository
+1. Go to [vercel.com](https://vercel.com) and sign in with GitHub
+2. Click **"New Project"**
+3. Import your repository: `chiragvadhavana/shopdeck-monitoring-api`
+4. Click **"Deploy"** (Vercel will auto-detect it's a Python project)
 
-   - `MONGODB_URL`
-   - `PRODUCT_URL`
-   - `INTERVAL_MINUTES` (optional)
+#### Step 2: Configure Environment Variables
+1. Go to your project dashboard on Vercel
+2. Click **"Settings"** → **"Environment Variables"**
+3. Add these variables:
 
-3. **Deploy**: Vercel will auto-deploy from GitHub
+   | Name | Value | Environment |
+   |------|-------|-------------|
+   | `MONGODB_URL` | Your MongoDB connection string | Production, Preview, Development |
+   | `PRODUCT_URL` | Your product URL to monitor | Production, Preview, Development |
+   | `INTERVAL_MINUTES` | `60` (optional) | Production, Preview, Development |
+
+4. Click **"Save"** for each variable
+
+#### Step 3: Redeploy
+1. Go to **"Deployments"** tab
+2. Click the **"..."** menu on the latest deployment
+3. Click **"Redeploy"** to apply the new environment variables
+
+#### Step 4: Test Your API
+Your API will be available at: `https://your-project-name.vercel.app`
 
 ### 4. Setup GitHub Actions Cron
 
