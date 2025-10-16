@@ -15,8 +15,8 @@ Real-time purchase monitoring API for ShopDeck websites with automatic scraping 
 
 ## 🌐 Live Demo
 
-- **API Interface**: [https://shopdeck-monitoring-api.vercel.app/](https://shopdeck-monitoring-api.vercel.app/)
-- **Health Check**: [https://shopdeck-monitoring-api.vercel.app/](https://shopdeck-monitoring-api.vercel.app/)
+- **Web Interface**: [https://shopdeck-monitoring-api.vercel.app/](https://shopdeck-monitoring-api.vercel.app/)
+- **Health Check**: [https://shopdeck-monitoring-api.vercel.app/health](https://shopdeck-monitoring-api.vercel.app/health)
 - **API Endpoints**: [https://shopdeck-monitoring-api.vercel.app/api/trigger](https://shopdeck-monitoring-api.vercel.app/api/trigger)
 
 ## 📋 API Endpoints
@@ -24,7 +24,7 @@ Real-time purchase monitoring API for ShopDeck websites with automatic scraping 
 ### Health Check
 
 ```bash
-GET /
+GET /health
 ```
 
 ### Trigger Scraping (with Auto-Config Extraction)

@@ -213,7 +213,7 @@ async function storePurchases(purchases, maxMinutes = 60, websiteName) {
   return storedCount;
 }
 
-app.get("/", async (req, res) => {
+app.get("/health", async (req, res) => {
   let dbStatus = "not configured";
   if (MONGODB_URL) {
     try {
