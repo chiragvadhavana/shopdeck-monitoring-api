@@ -1,80 +1,51 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShopDeck Monitor</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
-        .container { max-width: 800px; margin: 40px auto; padding: 20px; }
-        .card { background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h1 { color: #333; margin-bottom: 30px; text-align: center; }
-        h2 { color: #555; margin-bottom: 20px; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 5px; font-weight: 500; color: #333; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-        button { background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; }
+        input, button { padding: 8px; margin: 5px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
         button:hover { background: #0056b3; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .btn-download { background: #28a745; }
-        .btn-download:hover { background: #1e7e34; }
-        .result { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px; border-left: 4px solid #007bff; }
-        .error { border-left-color: #dc3545; background: #f8d7da; }
-        .success { border-left-color: #28a745; background: #d4edda; }
-        .loading { text-align: center; color: #666; }
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
-        .stat { text-align: center; padding: 15px; background: #e9ecef; border-radius: 4px; }
-        .stat-value { font-size: 24px; font-weight: bold; color: #007bff; }
-        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+        .result { background: #f8f9fa; padding: 10px; margin-top: 10px; font-family: monospace; white-space: pre-wrap; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🛍️ ShopDeck Monitor</h1>
-        
-        <!-- Manual Scraper -->
-        <div class="card">
-            <h2>Manual Scraper</h2>
-            <form id="scrapeForm">
-                <div class="form-group">
-                    <label for="productUrl">Product URL:</label>
-                    <input type="url" id="productUrl" name="productUrl" required 
-                           placeholder="https://example.com/product/catalogue/ABC123/XYZ789">
-                </div>
-                <div class="form-group">
-                    <label for="intervalMinutes">Time Range (minutes):</label>
-                    <select id="intervalMinutes" name="intervalMinutes">
-                        <option value="10">Last 10 minutes</option>
-                        <option value="30">Last 30 minutes</option>
-                        <option value="60">Last 1 hour</option>
-                        <option value="120">Last 2 hours</option>
-                    </select>
-                </div>
-                <button type="submit" id="scrapeBtn">🔍 Scrape Purchases</button>
-            </form>
-            <div id="scrapeResult"></div>
-        </div>
+    <h1>ShopDeck Monitor</h1>
+    
+    <div class="section">
+        <h2>Manual Scraper</h2>
+        <form id="scrapeForm">
+            <div>
+                <label>Product URL:</label><br>
+                <input type="url" id="productUrl" required style="width: 500px;" 
+                       placeholder="https://example.com/product/catalogue/ABC123/XYZ789">
+            </div>
+            <div>
+                <label>Minutes (1-59):</label><br>
+                <input type="number" id="intervalMinutes" min="1" max="59" value="10" style="width: 100px;">
+            </div>
+            <button type="submit">Scrape</button>
+        </form>
+        <div id="scrapeResult"></div>
+    </div>
 
-        <!-- CSV Download -->
-        <div class="card">
-            <h2>Download Data</h2>
-            <p>Download all stored purchase data as CSV file.</p>
-            <button class="btn-download" onclick="downloadCSV()">📥 Download CSV</button>
-        </div>
+    <div class="section">
+        <h2>Download Data</h2>
+        <button onclick="downloadCSV()">Download CSV</button>
     </div>
 
     <script>
-        // Manual Scraper
         document.getElementById('scrapeForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const btn = document.getElementById('scrapeBtn');
+            const btn = document.querySelector('button[type="submit"]');
             const result = document.getElementById('scrapeResult');
             
             btn.disabled = true;
-            btn.textContent = '⏳ Scraping...';
-            result.innerHTML = '<div class="loading">🔄 Scraping purchases...</div>';
+            btn.textContent = 'Scraping...';
+            result.innerHTML = 'Loading...';
             
             try {
                 const response = await fetch('/api/scrape', {
@@ -87,48 +58,15 @@
                 });
                 
                 const data = await response.json();
-                
-                if (data.success) {
-                    result.innerHTML = `
-                        <div class="result success">
-                            <h3>✅ ${data.message}</h3>
-                            <div class="stats">
-                                <div class="stat">
-                                    <div class="stat-value">${data.website}</div>
-                                    <div class="stat-label">Website</div>
-                                </div>
-                                <div class="stat">
-                                    <div class="stat-value">${data.records_found}</div>
-                                    <div class="stat-label">Total Found</div>
-                                </div>
-                                <div class="stat">
-                                    <div class="stat-value">${data.filtered_records}</div>
-                                    <div class="stat-label">In Time Range</div>
-                                </div>
-                            </div>
-                            ${data.filtered_purchases.length > 0 ? `
-                                <h4>Recent Purchases:</h4>
-                                <ul style="margin-top: 10px;">
-                                    ${data.filtered_purchases.slice(0, 5).map(p => 
-                                        `<li><strong>${p.title}</strong> - ${p.time_cta}</li>`
-                                    ).join('')}
-                                    ${data.filtered_purchases.length > 5 ? `<li><em>... and ${data.filtered_purchases.length - 5} more</em></li>` : ''}
-                                </ul>
-                            ` : '<p>No purchases found in the specified time range.</p>'}
-                        </div>
-                    `;
-                } else {
-                    result.innerHTML = `<div class="result error">❌ ${data.error}</div>`;
-                }
+                result.innerHTML = JSON.stringify(data, null, 2);
             } catch (error) {
-                result.innerHTML = `<div class="result error">❌ Error: ${error.message}</div>`;
+                result.innerHTML = 'Error: ' + error.message;
             } finally {
                 btn.disabled = false;
-                btn.textContent = '🔍 Scrape Purchases';
+                btn.textContent = 'Scrape';
             }
         });
 
-        // CSV Download
         async function downloadCSV() {
             try {
                 const response = await fetch('/api/export');
@@ -143,7 +81,7 @@
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
                 } else {
-                    alert('Error downloading CSV file');
+                    alert('Error downloading CSV');
                 }
             } catch (error) {
                 alert('Error: ' + error.message);

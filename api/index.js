@@ -5,14 +5,10 @@ const axios = require("axios");
 
 const app = express();
 app.use(express.json());
-
-// Serve static files from public directory
 app.use(express.static("public"));
 
-// Configuration
 const MONGODB_URL = process.env.MONGODB_URL || "";
 
-// MongoDB Connection
 let mongoClient = null;
 let db = null;
 let purchasesCollection = null;
@@ -28,7 +24,6 @@ async function getMongoConnection() {
   return purchasesCollection;
 }
 
-// Helper Functions
 function parseMinutes(timeStr) {
   const match = timeStr.toLowerCase().match(/(\d+)\s*minutes?\s*ago/);
   return match ? parseInt(match[1]) : null;
@@ -37,18 +32,13 @@ function parseMinutes(timeStr) {
 function extractProductIds(url) {
   const match = url.match(/catalogue\/([^\/]+)\/([^\/\?]+)/);
   if (!match) return null;
-  return {
-    productId: match[1],
-    skuId: match[2],
-  };
+  return { productId: match[1], skuId: match[2] };
 }
 
 function extractWebsiteName(url) {
   try {
-    const urlObj = new URL(url);
-    return urlObj.hostname;
+    return new URL(url).hostname;
   } catch (error) {
-    console.error("Error extracting website name:", error.message);
     return "unknown";
   }
 }
@@ -65,7 +55,6 @@ async function scrapePurchases(url) {
 
     console.log(`Product ID: ${ids.productId}, SKU ID: ${ids.skuId}`);
 
-    // Extract the base domain from the input URL
     const urlObj = new URL(url);
     const baseDomain = urlObj.hostname;
     const apiUrl = `https://${baseDomain}/api/prashth/page/${ids.productId}/${ids.skuId}`;
@@ -74,8 +63,7 @@ async function scrapePurchases(url) {
       external_id: "30f011de9b2542ab96b0302e49463db4",
       fbc: "fb.1.1754997368020.fbclid",
       fbp: "fb.1.1749556790621.339021267154647244",
-      offer_params:
-        '{"enable":true,"applied_coupon_codes":[],"pre_applied_coupon_codes":[]}',
+      offer_params: '{"enable":true,"applied_coupon_codes":[],"pre_applied_coupon_codes":[]}',
       page_no: 1,
       page_size: 5,
       sale_id: "68c81b3e891920179d3adab9",
@@ -86,8 +74,7 @@ async function scrapePurchases(url) {
       "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
       Connection: "keep-alive",
       Referer: url,
-      "User-Agent":
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
+      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
       wm_device_type: "mobile",
       wm_image_experiment: "control",
       wm_lang: "en",
@@ -101,17 +88,12 @@ async function scrapePurchases(url) {
       "Sec-Fetch-Dest": "empty",
       "Sec-Fetch-Mode": "cors",
       "Sec-Fetch-Site": "same-origin",
-      Cookie:
-        "__wm_visitor_id=a3cdbd59846343c98a67b0834dac25db; _ga=GA1.1.1516941305.1749556790; _fbp=fb.1.1749556790621.339021267154647244; _fbc=fb.1.1754997368020.fbclid",
+      Cookie: "__wm_visitor_id=a3cdbd59846343c98a67b0834dac25db; _ga=GA1.1.1516941305.1749556790; _fbp=fb.1.1749556790621.339021267154647244; _fbc=fb.1.1754997368020.fbclid",
     };
 
     console.log(`Calling API: ${apiUrl}`);
 
-    const response = await axios.get(apiUrl, {
-      params,
-      headers,
-      timeout: 10000,
-    });
+    const response = await axios.get(apiUrl, { params, headers, timeout: 10000 });
 
     console.log(`API response status: ${response.status}`);
     console.log(`API response code: ${response.data.code}`);
@@ -121,10 +103,7 @@ async function scrapePurchases(url) {
       console.log(`Found ${widgets.length} widgets`);
 
       for (const widget of widgets) {
-        if (
-          widget.title === "RECENT PURCHASE" ||
-          widget.title === "RECENT PURCHASES"
-        ) {
+        if (widget.title === "RECENT PURCHASE" || widget.title === "RECENT PURCHASES") {
           const entities = widget.entities || [];
           console.log(`Found ${entities.length} recent purchases`);
           return entities;
@@ -144,11 +123,7 @@ async function scrapePurchases(url) {
   }
 }
 
-async function storePurchases(
-  purchases,
-  maxMinutes = 40,
-  websiteName = "unknown"
-) {
+async function storePurchases(purchases, maxMinutes = 60, websiteName) {
   const collection = await getMongoConnection();
   if (!purchases || !collection) return 0;
 
@@ -166,12 +141,12 @@ async function storePurchases(
       const purchaseTime = purchaseDateTime.toTimeString().slice(0, 5);
 
       await collection.insertOne({
-        website_name: websiteName,
         product_name: purchase.product_name || "",
         product_id: purchase.product_short_id || "",
         customer_location: purchase.title || "",
         purchase_date: purchaseDate,
         purchase_time: purchaseTime,
+        website: websiteName,
         created_at: new Date(),
       });
       storedCount++;
@@ -180,7 +155,6 @@ async function storePurchases(
   return storedCount;
 }
 
-// API Endpoints
 app.get("/", async (req, res) => {
   let dbStatus = "not configured";
   if (MONGODB_URL) {
@@ -201,8 +175,7 @@ app.get("/", async (req, res) => {
 
 app.post("/api/trigger", async (req, res) => {
   try {
-    const intervalMinutes =
-      req.body.interval_minutes || req.query.interval_minutes || 40;
+    const intervalMinutes = req.body.interval_minutes || req.query.interval_minutes || 10;
     const productUrl = req.body.product_url || req.query.product_url;
 
     console.log("=== TRIGGER CALLED ===");
@@ -210,18 +183,13 @@ app.post("/api/trigger", async (req, res) => {
     console.log("Interval:", intervalMinutes);
 
     if (!productUrl) {
-      return res
-        .status(400)
-        .json({ error: "product_url parameter is required" });
+      return res.status(400).json({ error: "product_url is required" });
     }
 
     const collection = await getMongoConnection();
     if (!collection) {
       return res.status(500).json({ error: "Database not configured" });
     }
-
-    const websiteName = extractWebsiteName(productUrl);
-    console.log("Website:", websiteName);
 
     const purchases = await scrapePurchases(productUrl);
     console.log(`Found ${purchases.length} purchases`);
@@ -230,18 +198,15 @@ app.post("/api/trigger", async (req, res) => {
       return res.json({
         success: true,
         message: "No purchases found",
-        website: websiteName,
+        website: extractWebsiteName(productUrl),
         records_found: 0,
         records_stored: 0,
         all_purchases: [],
       });
     }
 
-    const storedCount = await storePurchases(
-      purchases,
-      parseInt(intervalMinutes),
-      websiteName
-    );
+    const websiteName = extractWebsiteName(productUrl);
+    const storedCount = await storePurchases(purchases, parseInt(intervalMinutes), websiteName);
     console.log(`Stored ${storedCount} purchases`);
 
     res.json({
@@ -260,7 +225,6 @@ app.post("/api/trigger", async (req, res) => {
   }
 });
 
-// Manual scraper endpoint (no DB interaction)
 app.post("/api/scrape", async (req, res) => {
   try {
     const { product_url, interval_minutes = 10 } = req.body;
@@ -286,16 +250,13 @@ app.post("/api/scrape", async (req, res) => {
       });
     }
 
-    // Filter purchases based on interval_minutes
     const filteredPurchases = purchases.filter((purchase) => {
       const timeCta = purchase.time_cta || "";
       const minutesAgo = parseMinutes(timeCta);
       return minutesAgo !== null && minutesAgo <= parseInt(interval_minutes);
     });
 
-    console.log(
-      `Filtered to ${filteredPurchases.length} purchases within ${interval_minutes} minutes`
-    );
+    console.log(`Filtered to ${filteredPurchases.length} purchases within ${interval_minutes} minutes`);
 
     res.json({
       success: true,
@@ -326,18 +287,15 @@ app.get("/api/export", async (req, res) => {
       .toArray();
 
     if (!purchases || purchases.length === 0) {
-      const csvData = "Website,Product Name,Product ID,Customer,Date,Time\n";
+      const csvData = "Product Name,Product ID,Customer,Date,Time,Website\n";
       res.setHeader("Content-Type", "text/csv");
-      res.setHeader(
-        "Content-Disposition",
-        "attachment; filename=purchases.csv"
-      );
+      res.setHeader("Content-Disposition", "attachment; filename=purchases.csv");
       return res.send(csvData);
     }
 
-    const csvLines = ["Website,Product Name,Product ID,Customer,Date,Time"];
+    const csvLines = ["Product Name,Product ID,Customer,Date,Time,Website"];
     for (const p of purchases) {
-      const line = `"${p.website_name}","${p.product_name}","${p.product_id}","${p.customer_location}","${p.purchase_date}","${p.purchase_time}"`;
+      const line = `"${p.product_name}","${p.product_id}","${p.customer_location}","${p.purchase_date}","${p.purchase_time}","${p.website || ""}"`;
       csvLines.push(line);
     }
 
@@ -351,10 +309,8 @@ app.get("/api/export", async (req, res) => {
   }
 });
 
-// Export for Vercel serverless
 module.exports = app;
 
-// For local development
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {

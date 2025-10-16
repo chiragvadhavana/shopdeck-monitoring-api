@@ -2,11 +2,9 @@ name: VIP Fashion Store Scraper
 
 on:
   schedule:
-    # Run every 10 minutes (UTC time)
     - cron: "*/10 * * * *"
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch:
 
-# Ensure the workflow has proper permissions
 permissions:
   contents: read
   actions: read
@@ -14,86 +12,31 @@ permissions:
 jobs:
   scrape-vipfashion:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check Required Secrets
-        run: |
-          if [ -z "${{ secrets.VERCEL_API_URL }}" ]; then
-            echo "❌ VERCEL_API_URL secret is not set!"
-            echo "Please go to Settings → Secrets and variables → Actions"
-            echo "Add VERCEL_API_URL with value: https://shopdeck-monitoring-api.vercel.app"
-            exit 1
-          else
-            echo "✅ VERCEL_API_URL secret is configured"
-            echo "API URL: ${{ secrets.VERCEL_API_URL }}"
-          fi
-
       - name: Scrape VIP Fashion Store
         run: |
-          echo "🛍️ Starting VIP Fashion Store scraping..."
-
-          # Call the Vercel API to scrape purchases
           response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_API_URL }}/api/trigger" \
             -H "Content-Type: application/json" \
             -d '{
               "product_url": "https://vipfashionstore.com/Mashroom-Linen-Mul-Cotton-Saree--White./catalogue/iUK1oUsS/XTwuIAbs",
               "interval_minutes": 10
             }')
-
-          # Extract HTTP status code and response body
+          
           http_code=$(echo "$response" | tail -n1)
           response_body=$(echo "$response" | head -n -1)
-
-          echo "📊 API Response (HTTP $http_code):"
+          
+          echo "Response (HTTP $http_code):"
           echo "$response_body" | jq '.' 2>/dev/null || echo "$response_body"
-
-          # Check if the request was successful
-          if [ "$http_code" -eq 200 ]; then
-            echo "✅ VIP Fashion Store scraping completed successfully!"
-            
-            # Extract records found and stored
-            records_found=$(echo "$response_body" | jq -r '.records_found // 0' 2>/dev/null || echo "0")
-            records_stored=$(echo "$response_body" | jq -r '.records_stored // 0' 2>/dev/null || echo "0")
-            website=$(echo "$response_body" | jq -r '.website // "unknown"' 2>/dev/null || echo "unknown")
-            
-            echo "📈 VIP Fashion Store Summary:"
-            echo "   Website: $website"
-            echo "   Records Found: $records_found"
-            echo "   Records Stored: $records_stored"
-            
-            # Create a summary for the workflow
-            echo "## 🛍️ VIP Fashion Store Results" >> $GITHUB_STEP_SUMMARY
-            echo "- **Website**: $website" >> $GITHUB_STEP_SUMMARY
-            echo "- **Records Found**: $records_found" >> $GITHUB_STEP_SUMMARY
-            echo "- **Records Stored**: $records_stored" >> $GITHUB_STEP_SUMMARY
-            echo "- **Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
-            
-          else
-            echo "❌ VIP Fashion Store scraping failed with HTTP status: $http_code"
-            echo "Response: $response_body"
+          
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ Scraping failed"
             exit 1
           fi
-
-      - name: Check API Health
-        run: |
-          echo "🔍 Checking API health..."
-
-          health_response=$(curl -s -w "\n%{http_code}" "${{ secrets.VERCEL_API_URL }}/")
-          health_code=$(echo "$health_response" | tail -n1)
-          health_body=$(echo "$health_response" | head -n -1)
-
-          echo "🏥 Health Check (HTTP $health_code):"
-          echo "$health_body" | jq '.' 2>/dev/null || echo "$health_body"
-
-          if [ "$health_code" -eq 200 ]; then
-            echo "✅ API is healthy!"
-          else
-            echo "⚠️ API health check failed"
-          fi
-
-      - name: Notify on Failure
-        if: failure()
-        run: |
-          echo "🚨 VIP Fashion Store automated scraping failed!"
-          echo "Please check the API logs and ensure the Vercel deployment is running."
-          echo "API URL: ${{ secrets.VERCEL_API_URL }}"
+          
+          records_found=$(echo "$response_body" | jq -r '.records_found // 0' 2>/dev/null || echo "0")
+          records_stored=$(echo "$response_body" | jq -r '.records_stored // 0' 2>/dev/null || echo "0")
+          
+          echo "## VIP Fashion Store Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Records Found**: $records_found" >> $GITHUB_STEP_SUMMARY
+          echo "- **Records Stored**: $records_stored" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
