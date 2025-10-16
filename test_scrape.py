@@ -1,6 +1,5 @@
 """
-Simple test script to verify scraping works.
-Run this first to make sure everything is working.
+Test script for ShopDeck purchase scraping.
 """
 
 import os
@@ -24,7 +23,7 @@ def parse_minutes(time_str: str):
 
 async def scrape_purchases(url: str):
     """Scrape purchases from product page."""
-    print(f"🔍 Scraping: {url}\n")
+    print(f"Scraping: {url}\n")
 
     api_data = None
     user_agents = [
@@ -64,18 +63,23 @@ async def scrape_purchases(url: str):
 
 async def main():
     if not PRODUCT_URL:
-        print("❌ Error: PRODUCT_URL not set in .env file")
+        print("Error: PRODUCT_URL not set in .env file")
         return
+
+    MAX_MINUTES = 40
+    print(f"Testing with {MAX_MINUTES}-minute cap...\n")
 
     purchases = await scrape_purchases(PRODUCT_URL)
 
     if not purchases:
-        print("❌ No purchases found")
+        print("No purchases found")
         return
 
-    print(f"✅ Found {len(purchases)} purchases:\n")
+    print(f"Found {len(purchases)} total purchases:\n")
 
     current_time = datetime.now()
+    within_window = 0
+    outside_window = 0
 
     for i, purchase in enumerate(purchases, 1):
         time_cta = purchase.get("time_cta", "")
@@ -86,16 +90,37 @@ async def main():
 
         if minutes_ago is not None:
             purchase_time = current_time - timedelta(minutes=minutes_ago)
+            status = (
+                "WITHIN WINDOW"
+                if minutes_ago <= MAX_MINUTES
+                else "OUTSIDE WINDOW"
+            )
+
+            if minutes_ago <= MAX_MINUTES:
+                within_window += 1
+            else:
+                outside_window += 1
+
             print(f"{i}. {product_name}")
             print(f"   Customer: {customer}")
             print(
                 f"   Time: {minutes_ago} minutes ago ({purchase_time.strftime('%Y-%m-%d %H:%M')})"
             )
+            print(f"   Status: {status}")
         else:
             print(f"{i}. {product_name}")
             print(f"   Customer: {customer}")
             print(f"   Time: {time_cta}")
+            print(f"   Status: NOT MINUTE-BASED FORMAT")
         print()
+
+    print("=" * 50)
+    print(f"SUMMARY (40-minute window):")
+    print(f"   Total found: {len(purchases)}")
+    print(f"   Within window: {within_window}")
+    print(f"   Outside window: {outside_window}")
+    print(f"   Would be stored: {within_window}")
+    print("=" * 50)
 
 
 if __name__ == "__main__":

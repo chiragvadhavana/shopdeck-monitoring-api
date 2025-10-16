@@ -1,6 +1,6 @@
 """
-ShopDeck Monitoring API - Super Simple Single File Version
-Everything in one place for easy understanding and maintenance.
+ShopDeck Purchase Monitoring API
+Simple FastAPI backend for tracking product purchases.
 """
 
 import os
@@ -39,9 +39,7 @@ purchases_collection = db["purchases"] if db is not None else None
 app = FastAPI(title="ShopDeck Monitoring API", version="1.0.0")
 
 
-# ============================================================================
-# MODELS
-# ============================================================================
+# Response Models
 
 
 class TriggerResponse(BaseModel):
@@ -51,9 +49,7 @@ class TriggerResponse(BaseModel):
     records_stored: int = 0
 
 
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
+# Helper Functions
 
 
 def parse_minutes(time_str: str) -> Optional[int]:
@@ -105,7 +101,7 @@ async def scrape_purchases(url: str) -> list:
 
 
 def store_purchases(purchases: list, max_minutes: int = 60) -> int:
-    """Store only 'X minutes ago' purchases within time window - EXACT logic from SQLite version."""
+    """Store purchases within specified time window."""
     if not purchases or purchases_collection is None:
         return 0
 
@@ -116,18 +112,14 @@ def store_purchases(purchases: list, max_minutes: int = 60) -> int:
         time_cta = purchase.get("time_cta", "")
         minutes_ago = parse_minutes(time_cta)
 
-        # Only store if it's "X minutes ago" format AND within window
         if minutes_ago is not None and minutes_ago <= max_minutes:
             product_name = purchase.get("product_name", "")
             product_id = purchase.get("product_short_id", "")
             customer_location = purchase.get("title", "")
 
-            # Calculate actual purchase time
             purchase_datetime = current_time - timedelta(minutes=minutes_ago)
             purchase_date = purchase_datetime.strftime("%Y-%m-%d")
             purchase_time = purchase_datetime.strftime("%H:%M")
-
-            # Insert directly - no duplicate checking (matching SQLite version)
             purchases_collection.insert_one(
                 {
                     "product_name": product_name,
@@ -143,9 +135,7 @@ def store_purchases(purchases: list, max_minutes: int = 60) -> int:
     return stored_count
 
 
-# ============================================================================
-# API ENDPOINTS
-# ============================================================================
+# API Endpoints
 
 
 @app.get("/")

@@ -1,29 +1,29 @@
 # ShopDeck Purchase Monitoring API
 
-**Super simple FastAPI backend for monitoring ShopDeck product purchases. Everything in one file!**
+FastAPI backend for monitoring ShopDeck product purchases with automatic data collection and CSV export functionality.
 
-## 🎯 What It Does
+## Overview
 
-- **Scrapes** recent purchases from ShopDeck product pages
-- **Filters** ONLY purchases marked as "X minutes ago" (e.g., "5 minutes ago", "45 minutes ago")
-- **Stores** purchases in MongoDB Atlas (only within your specified time window)
-- **Exports** data as CSV
-- **Auto-runs** every 5 minutes via GitHub Actions
+- Scrapes recent purchases from ShopDeck product pages
+- Filters purchases marked as "X minutes ago" format
+- Stores purchases in MongoDB Atlas within specified time window
+- Exports data as CSV
+- Auto-runs every 5 minutes via GitHub Actions
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 shopdeck-monitoring-api/
-├── api.py                   # 🔥 Single file with everything!
-├── test_scrape.py           # Test script to verify scraping works
+├── api.py                   # Main API application
+├── test_scrape.py           # Test script for scraping
 ├── pyproject.toml           # Dependencies
 ├── vercel.json              # Vercel deployment config
 ├── .github/workflows/
-│   └── cron.yml             # Auto-run every 5 minutes
-└── README.md                # This file
+│   └── cron.yml             # Automated monitoring
+└── README.md                # Documentation
 ```
 
-## 🚀 Quick Setup
+## Quick Setup
 
 ### 1. Prerequisites
 
@@ -36,7 +36,7 @@ shopdeck-monitoring-api/
 
 1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 2. Create a free cluster
-3. **IMPORTANT**: Go to "Network Access" → Add IP Address → **Allow Access from Anywhere (0.0.0.0/0)**
+3. Go to "Network Access" → Add IP Address → Allow Access from Anywhere (0.0.0.0/0)
 4. Create a database user with password
 5. Get your connection string (looks like `mongodb+srv://username:password@cluster...`)
 
@@ -104,7 +104,7 @@ Your API will be at: `https://your-project.vercel.app`
    - `INTERVAL_MINUTES`: `60` (optional, defaults to 60)
 3. The cron job runs automatically every 5 minutes! ✅
 
-## 📡 API Endpoints
+## API Endpoints
 
 | Endpoint   | Method | Description                    |
 | ---------- | ------ | ------------------------------ |
@@ -113,7 +113,7 @@ Your API will be at: `https://your-project.vercel.app`
 | `/export`  | GET    | Download purchases as CSV      |
 | `/stats`   | GET    | Get database statistics        |
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -125,23 +125,23 @@ Your API will be at: `https://your-project.vercel.app`
 
 ### How the Time Window Works
 
-**IMPORTANT**: Only purchases with "X minutes ago" format are tracked!
+Only purchases with "X minutes ago" format are tracked.
 
 - If `INTERVAL_MINUTES=30`, only purchases within last 30 minutes are stored
 - If `INTERVAL_MINUTES=60`, only purchases within last 60 minutes are stored
-- Purchases marked as "an hour ago", "2 hours ago", etc. are **IGNORED** ❌
+- Purchases marked as "an hour ago", "2 hours ago", etc. are ignored
 - No duplicate checking - each run stores fresh data
 
 **Example:**
 
 If you set `INTERVAL_MINUTES=40` and the scraper finds:
 
-- "5 minutes ago" → ✅ Stored (within 40 minutes)
-- "35 minutes ago" → ✅ Stored (within 40 minutes)
-- "45 minutes ago" → ❌ NOT stored (outside 40 minutes)
-- "an hour ago" → ❌ NOT stored (not minute-based format)
+- "5 minutes ago" → Stored (within 40 minutes)
+- "35 minutes ago" → Stored (within 40 minutes)
+- "45 minutes ago" → NOT stored (outside 40 minutes)
+- "an hour ago" → NOT stored (not minute-based format)
 
-## 🗄️ Database Schema
+## Database Schema
 
 MongoDB Collection: `shopdeck_monitoring.purchases`
 
@@ -157,12 +157,12 @@ MongoDB Collection: `shopdeck_monitoring.purchases`
 }
 ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### MongoDB Connection Failed
 
 - Check your connection string format
-- **Make sure you allowed access from anywhere (0.0.0.0/0)** in MongoDB Network Access
+- Make sure you allowed access from anywhere (0.0.0.0/0) in MongoDB Network Access
 - Verify username/password are correct
 
 ### No Purchases Stored
@@ -177,7 +177,7 @@ MongoDB Collection: `shopdeck_monitoring.purchases`
 - Check Vercel logs for errors
 - MongoDB Atlas must allow connections from anywhere
 
-## 📊 GitHub Actions Monitoring
+## GitHub Actions Monitoring
 
 The cron job (`*/5 * * * *`) runs every 5 minutes automatically:
 
@@ -186,29 +186,27 @@ The cron job (`*/5 * * * *`) runs every 5 minutes automatically:
 3. Stores in MongoDB if within time window
 4. Logs results in GitHub Actions tab
 
-## 🎉 That's It!
+## Summary
 
-Everything is now super simple:
+The system provides:
 
-- ✅ Single `api.py` file with all logic
-- ✅ Only tracks minute-based purchases
-- ✅ No duplicate checking (simple inserts)
-- ✅ Works on Vercel + GitHub Actions
-- ✅ Free tier everything!
+- Single `api.py` file with all logic
+- Tracks only minute-based purchases
+- No duplicate checking for simplicity
+- Works on Vercel + GitHub Actions
+- Uses free tier services
 
-## 📝 Files Created
+## Files
 
 - `api.py` - Main API (replaced old `app/` folder)
 - `test_scrape.py` - Quick test script
 - `vercel.json` - Points to `api.py`
 - `.github/workflows/cron.yml` - Uses `api.py`
 
-## 🚨 What Changed from Complex Version
+## Changes from Previous Version
 
-- ✅ Everything in ONE file (`api.py`)
-- ✅ No separate `models.py`, `services.py`, `database.py`
-- ✅ No duplicate checking (simpler, faster)
-- ✅ Exact same logic as the perfect SQLite version
-- ✅ Only minute-based tracking (no hours/days)
-
-Happy monitoring! 🎉
+- Everything consolidated into one file (`api.py`)
+- Removed separate `models.py`, `services.py`, `database.py`
+- No duplicate checking for simplicity
+- Same logic as SQLite version
+- Only minute-based tracking
