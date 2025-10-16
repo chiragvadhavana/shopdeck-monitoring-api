@@ -254,6 +254,57 @@ app.post("/api/trigger", async (req, res) => {
   }
 });
 
+// Manual scraper endpoint (no DB interaction)
+app.post("/api/scrape", async (req, res) => {
+  try {
+    const { product_url, interval_minutes = 10 } = req.body;
+    
+    if (!product_url) {
+      return res.status(400).json({ error: "product_url is required" });
+    }
+
+    console.log("=== MANUAL SCRAPE CALLED ===");
+    console.log("Product URL:", product_url);
+    console.log("Interval:", interval_minutes);
+
+    const purchases = await scrapePurchases(product_url);
+    console.log(`Found ${purchases.length} purchases`);
+
+    if (!purchases || purchases.length === 0) {
+      return res.json({
+        success: true,
+        message: "No purchases found",
+        website: extractWebsiteName(product_url),
+        records_found: 0,
+        filtered_purchases: [],
+      });
+    }
+
+    // Filter purchases based on interval_minutes
+    const filteredPurchases = purchases.filter(purchase => {
+      const timeCta = purchase.time_cta || "";
+      const minutesAgo = parseMinutes(timeCta);
+      return minutesAgo !== null && minutesAgo <= parseInt(interval_minutes);
+    });
+
+    console.log(`Filtered to ${filteredPurchases.length} purchases within ${interval_minutes} minutes`);
+
+    res.json({
+      success: true,
+      message: "Scraping completed successfully",
+      website: extractWebsiteName(product_url),
+      records_found: purchases.length,
+      filtered_records: filteredPurchases.length,
+      all_purchases: purchases,
+      filtered_purchases: filteredPurchases,
+    });
+  } catch (error) {
+    console.error("=== MANUAL SCRAPE ERROR ===");
+    console.error("Message:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get("/api/export", async (req, res) => {
   try {
     const collection = await getMongoConnection();

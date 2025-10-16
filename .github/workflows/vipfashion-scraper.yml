@@ -1,4 +1,4 @@
-name: Vinayak Fashion Scraper
+name: VIP Fashion Store Scraper
 
 on:
   schedule:
@@ -12,7 +12,7 @@ permissions:
   actions: read
 
 jobs:
-  scrape-vinayak:
+  scrape-vipfashion:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,15 +28,15 @@ jobs:
             echo "API URL: ${{ secrets.VERCEL_API_URL }}"
           fi
 
-      - name: Scrape Vinayak Fashion
+      - name: Scrape VIP Fashion Store
         run: |
-          echo "🛍️ Starting Vinayak Fashion scraping..."
+          echo "🛍️ Starting VIP Fashion Store scraping..."
 
           # Call the Vercel API to scrape purchases
           response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_API_URL }}/api/trigger" \
             -H "Content-Type: application/json" \
             -d '{
-              "product_url": "https://vinayakfashion.co/Khadi-Cotton-A-line-Dress/catalogue/MuBDATc1/7jlKiiGv?source=sales_activity&utm_source=sales_activity",
+              "product_url": "https://vipfashionstore.com/Mashroom-Linen-Mul-Cotton-Saree--White./catalogue/iUK1oUsS/XTwuIAbs",
               "interval_minutes": 10
             }')
 
@@ -49,27 +49,27 @@ jobs:
 
           # Check if the request was successful
           if [ "$http_code" -eq 200 ]; then
-            echo "✅ Vinayak Fashion scraping completed successfully!"
+            echo "✅ VIP Fashion Store scraping completed successfully!"
             
             # Extract records found and stored
             records_found=$(echo "$response_body" | jq -r '.records_found // 0' 2>/dev/null || echo "0")
             records_stored=$(echo "$response_body" | jq -r '.records_stored // 0' 2>/dev/null || echo "0")
             website=$(echo "$response_body" | jq -r '.website // "unknown"' 2>/dev/null || echo "unknown")
             
-            echo "📈 Vinayak Fashion Summary:"
+            echo "📈 VIP Fashion Store Summary:"
             echo "   Website: $website"
             echo "   Records Found: $records_found"
             echo "   Records Stored: $records_stored"
             
             # Create a summary for the workflow
-            echo "## 🛍️ Vinayak Fashion Results" >> $GITHUB_STEP_SUMMARY
+            echo "## 🛍️ VIP Fashion Store Results" >> $GITHUB_STEP_SUMMARY
             echo "- **Website**: $website" >> $GITHUB_STEP_SUMMARY
             echo "- **Records Found**: $records_found" >> $GITHUB_STEP_SUMMARY
             echo "- **Records Stored**: $records_stored" >> $GITHUB_STEP_SUMMARY
             echo "- **Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
             
           else
-            echo "❌ Vinayak Fashion scraping failed with HTTP status: $http_code"
+            echo "❌ VIP Fashion Store scraping failed with HTTP status: $http_code"
             echo "Response: $response_body"
             exit 1
           fi
@@ -94,6 +94,6 @@ jobs:
       - name: Notify on Failure
         if: failure()
         run: |
-          echo "🚨 Vinayak Fashion automated scraping failed!"
+          echo "🚨 VIP Fashion Store automated scraping failed!"
           echo "Please check the API logs and ensure the Vercel deployment is running."
           echo "API URL: ${{ secrets.VERCEL_API_URL }}"
