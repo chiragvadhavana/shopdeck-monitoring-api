@@ -52,7 +52,7 @@ async def scrape_purchases(url: str) -> list:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
     ]
-    
+
     try:
         async with async_playwright() as p:
             # Vercel-specific browser launch options
@@ -65,15 +65,15 @@ async def scrape_purchases(url: str) -> list:
                     "--disable-accelerated-2d-canvas",
                     "--no-first-run",
                     "--no-zygote",
-                    "--disable-gpu"
-                ]
+                    "--disable-gpu",
+                ],
             )
             context = await browser.new_context(
                 user_agent=random.choice(user_agents),
-                viewport={"width": 1920, "height": 1080}
+                viewport={"width": 1920, "height": 1080},
             )
             page = await context.new_page()
-            
+
             async def handle_response(response):
                 nonlocal api_data
                 if "/api/prashth/page/" in response.url and response.status == 200:
@@ -84,7 +84,7 @@ async def scrape_purchases(url: str) -> list:
                     except Exception as e:
                         print(f"Error parsing response: {e}")
                         pass
-            
+
             page.on("response", handle_response)
             await page.goto(url, wait_until="networkidle", timeout=60000)
             await page.wait_for_timeout(5000)  # Increased wait time for Vercel
@@ -92,14 +92,14 @@ async def scrape_purchases(url: str) -> list:
     except Exception as e:
         print(f"Error scraping: {e}")
         return []
-    
+
     # Extract purchases from API data
     if api_data:
         widgets = api_data.get("data", {}).get("widgets", [])
         for widget in widgets:
             if widget.get("title") == "RECENT PURCHASE":
                 return widget.get("entities", [])
-    
+
     return []
 
 
@@ -164,7 +164,7 @@ async def trigger_monitoring(
 ):
     """Manually trigger purchase monitoring."""
     from urllib.parse import unquote
-    
+
     if interval_minutes is None:
         interval_minutes = INTERVAL_MINUTES
     else:
