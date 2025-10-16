@@ -3,80 +3,80 @@ name: Auto Scrape ShopDeck Purchases
 on:
   schedule:
     # Run every 10 minutes
-    - cron: '*/10 * * * *'
+    - cron: "*/10 * * * *"
   workflow_dispatch: # Allow manual triggering
 
 jobs:
   scrape-purchases:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Trigger API Scraping
-      run: |
-        echo "🛍️ Starting automated ShopDeck purchase scraping..."
-        
-        # Call the Vercel API to scrape purchases
-        response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_API_URL }}/api/trigger" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "product_url": "https://vinayakfashion.co/Khadi-Cotton-A-line-Dress/catalogue/MuBDATc1/7jlKiiGv?source=sales_activity&utm_source=sales_activity",
-            "interval_minutes": 40
-          }')
-        
-        # Extract HTTP status code and response body
-        http_code=$(echo "$response" | tail -n1)
-        response_body=$(echo "$response" | head -n -1)
-        
-        echo "📊 API Response (HTTP $http_code):"
-        echo "$response_body" | jq '.' 2>/dev/null || echo "$response_body"
-        
-        # Check if the request was successful
-        if [ "$http_code" -eq 200 ]; then
-          echo "✅ Scraping completed successfully!"
-          
-          # Extract records found and stored
-          records_found=$(echo "$response_body" | jq -r '.records_found // 0' 2>/dev/null || echo "0")
-          records_stored=$(echo "$response_body" | jq -r '.records_stored // 0' 2>/dev/null || echo "0")
-          website=$(echo "$response_body" | jq -r '.website // "unknown"' 2>/dev/null || echo "unknown")
-          
-          echo "📈 Summary:"
-          echo "   Website: $website"
-          echo "   Records Found: $records_found"
-          echo "   Records Stored: $records_stored"
-          
-          # Create a summary for the workflow
-          echo "## 🛍️ Scraping Results" >> $GITHUB_STEP_SUMMARY
-          echo "- **Website**: $website" >> $GITHUB_STEP_SUMMARY
-          echo "- **Records Found**: $records_found" >> $GITHUB_STEP_SUMMARY
-          echo "- **Records Stored**: $records_stored" >> $GITHUB_STEP_SUMMARY
-          echo "- **Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
-          
-        else
-          echo "❌ Scraping failed with HTTP status: $http_code"
-          echo "Response: $response_body"
-          exit 1
-        fi
+      - name: Trigger API Scraping
+        run: |
+          echo "🛍️ Starting automated ShopDeck purchase scraping..."
 
-    - name: Check API Health
-      run: |
-        echo "🔍 Checking API health..."
-        
-        health_response=$(curl -s -w "\n%{http_code}" "${{ secrets.VERCEL_API_URL }}/")
-        health_code=$(echo "$health_response" | tail -n1)
-        health_body=$(echo "$health_response" | head -n -1)
-        
-        echo "🏥 Health Check (HTTP $health_code):"
-        echo "$health_body" | jq '.' 2>/dev/null || echo "$health_body"
-        
-        if [ "$health_code" -eq 200 ]; then
-          echo "✅ API is healthy!"
-        else
-          echo "⚠️ API health check failed"
-        fi
+          # Call the Vercel API to scrape purchases
+          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_API_URL }}/api/trigger" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "product_url": "https://vinayakfashion.co/Khadi-Cotton-A-line-Dress/catalogue/MuBDATc1/7jlKiiGv?source=sales_activity&utm_source=sales_activity",
+              "interval_minutes": 10
+            }')
 
-    - name: Notify on Failure
-      if: failure()
-      run: |
-        echo "🚨 Automated scraping failed!"
-        echo "Please check the API logs and ensure the Vercel deployment is running."
-        echo "API URL: ${{ secrets.VERCEL_API_URL }}"
+          # Extract HTTP status code and response body
+          http_code=$(echo "$response" | tail -n1)
+          response_body=$(echo "$response" | head -n -1)
+
+          echo "📊 API Response (HTTP $http_code):"
+          echo "$response_body" | jq '.' 2>/dev/null || echo "$response_body"
+
+          # Check if the request was successful
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Scraping completed successfully!"
+            
+            # Extract records found and stored
+            records_found=$(echo "$response_body" | jq -r '.records_found // 0' 2>/dev/null || echo "0")
+            records_stored=$(echo "$response_body" | jq -r '.records_stored // 0' 2>/dev/null || echo "0")
+            website=$(echo "$response_body" | jq -r '.website // "unknown"' 2>/dev/null || echo "unknown")
+            
+            echo "📈 Summary:"
+            echo "   Website: $website"
+            echo "   Records Found: $records_found"
+            echo "   Records Stored: $records_stored"
+            
+            # Create a summary for the workflow
+            echo "## 🛍️ Scraping Results" >> $GITHUB_STEP_SUMMARY
+            echo "- **Website**: $website" >> $GITHUB_STEP_SUMMARY
+            echo "- **Records Found**: $records_found" >> $GITHUB_STEP_SUMMARY
+            echo "- **Records Stored**: $records_stored" >> $GITHUB_STEP_SUMMARY
+            echo "- **Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+            
+          else
+            echo "❌ Scraping failed with HTTP status: $http_code"
+            echo "Response: $response_body"
+            exit 1
+          fi
+
+      - name: Check API Health
+        run: |
+          echo "🔍 Checking API health..."
+
+          health_response=$(curl -s -w "\n%{http_code}" "${{ secrets.VERCEL_API_URL }}/")
+          health_code=$(echo "$health_response" | tail -n1)
+          health_body=$(echo "$health_response" | head -n -1)
+
+          echo "🏥 Health Check (HTTP $health_code):"
+          echo "$health_body" | jq '.' 2>/dev/null || echo "$health_body"
+
+          if [ "$health_code" -eq 200 ]; then
+            echo "✅ API is healthy!"
+          else
+            echo "⚠️ API health check failed"
+          fi
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "🚨 Automated scraping failed!"
+          echo "Please check the API logs and ensure the Vercel deployment is running."
+          echo "API URL: ${{ secrets.VERCEL_API_URL }}"

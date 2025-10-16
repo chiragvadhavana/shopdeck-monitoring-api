@@ -21,11 +21,13 @@ Real-time purchase monitoring API for ShopDeck websites with automatic scraping 
 ## 📋 API Endpoints
 
 ### Health Check
+
 ```bash
 GET /
 ```
 
 ### Trigger Scraping
+
 ```bash
 POST /api/trigger
 Content-Type: application/json
@@ -37,6 +39,7 @@ Content-Type: application/json
 ```
 
 ### Export Data
+
 ```bash
 GET /api/export
 ```
@@ -62,6 +65,7 @@ MONGODB_URL=mongodb+srv://user:password@cluster.mongodb.net/shopdeck_monitoring
 ### 3. Automated Scraping
 
 The GitHub Actions workflow will automatically:
+
 - Run every 10 minutes
 - Scrape the configured product URL
 - Store new purchases in MongoDB
@@ -84,6 +88,7 @@ The GitHub Actions workflow will automatically:
 ## 🎯 Usage Examples
 
 ### Manual API Call
+
 ```bash
 curl -X POST https://shopdeck-monitoring-api.vercel.app/api/trigger \
   -H "Content-Type: application/json" \
@@ -94,6 +99,7 @@ curl -X POST https://shopdeck-monitoring-api.vercel.app/api/trigger \
 ```
 
 ### Download CSV
+
 ```bash
 curl -o purchases.csv https://shopdeck-monitoring-api.vercel.app/api/export
 ```
@@ -151,6 +157,7 @@ shopdeck-monitoring-api/
 ## 📞 Support
 
 For issues or questions, please check:
+
 1. GitHub Actions logs for scraping errors
 2. Vercel deployment logs for API issues
 3. MongoDB connection for database problems
