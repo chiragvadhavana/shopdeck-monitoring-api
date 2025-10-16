@@ -1,8 +1,3 @@
-"""
-ShopDeck Purchase Monitoring API
-Simple FastAPI backend for tracking product purchases.
-"""
-
 import os
 import re
 import random
@@ -25,11 +20,6 @@ MONGODB_URL = os.getenv("MONGODB_URL", "")
 PRODUCT_URL = os.getenv("PRODUCT_URL", "")
 INTERVAL_MINUTES = int(os.getenv("INTERVAL_MINUTES", "60"))
 
-# Add SSL fix for Vercel
-if MONGODB_URL and "tlsAllowInvalidCertificates" not in MONGODB_URL:
-    separator = "&" if "?" in MONGODB_URL else "?"
-    MONGODB_URL = f"{MONGODB_URL}{separator}tlsAllowInvalidCertificates=true"
-
 # MongoDB Connection
 mongo_client = MongoClient(MONGODB_URL) if MONGODB_URL else None
 db = mongo_client["shopdeck_monitoring"] if mongo_client is not None else None
@@ -40,18 +30,15 @@ app = FastAPI(title="ShopDeck Monitoring API", version="1.0.0")
 
 
 # Response Models
-
-
 class TriggerResponse(BaseModel):
     success: bool
     message: str
     records_found: int = 0
     records_stored: int = 0
+    all_purchases: list = []
 
 
 # Helper Functions
-
-
 def parse_minutes(time_str: str) -> Optional[int]:
     """Parse 'X minutes ago' format from time string."""
     match = re.search(r"(\d+)\s*minutes?\s*ago", time_str.lower())
@@ -118,6 +105,7 @@ def store_purchases(purchases: list, max_minutes: int = 60) -> int:
             customer_location = purchase.get("title", "")
 
             purchase_datetime = current_time - timedelta(minutes=minutes_ago)
+            purchase_datetime = purchase_datetime.replace(second=0, microsecond=0)
             purchase_date = purchase_datetime.strftime("%Y-%m-%d")
             purchase_time = purchase_datetime.strftime("%H:%M")
             purchases_collection.insert_one(
@@ -136,8 +124,6 @@ def store_purchases(purchases: list, max_minutes: int = 60) -> int:
 
 
 # API Endpoints
-
-
 @app.get("/")
 def health_check():
     """Health check endpoint."""
@@ -157,8 +143,14 @@ def health_check():
 
 
 @app.post("/trigger", response_model=TriggerResponse)
-async def trigger_monitoring():
+async def trigger_monitoring(interval_minutes: Optional[int] = None):
     """Manually trigger purchase monitoring."""
+
+    if interval_minutes is None:
+        interval_minutes = INTERVAL_MINUTES
+    else:
+        interval_minutes = int(interval_minutes)
+
     if not PRODUCT_URL:
         raise HTTPException(status_code=400, detail="PRODUCT_URL not set")
 
@@ -174,15 +166,17 @@ async def trigger_monitoring():
                 message="No purchases found",
                 records_found=0,
                 records_stored=0,
+                all_purchases=[],
             )
 
-        stored_count = store_purchases(purchases, INTERVAL_MINUTES)
+        stored_count = store_purchases(purchases, interval_minutes)
 
         return TriggerResponse(
             success=True,
             message="Monitoring completed successfully",
             records_found=len(purchases),
             records_stored=stored_count,
+            all_purchases=purchases,
         )
 
     except Exception as e:
@@ -220,33 +214,6 @@ def export_csv():
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
-@app.get("/stats")
-def get_stats():
-    """Get statistics about stored purchases."""
-    if purchases_collection is None:
-        raise HTTPException(status_code=500, detail="Database not configured")
-
-    try:
-        total_count = purchases_collection.count_documents({})
-        unique_products = purchases_collection.distinct("product_id")
-
-        oldest = purchases_collection.find_one({}, sort=[("purchase_date", 1)])
-        newest = purchases_collection.find_one({}, sort=[("purchase_date", -1)])
-
-        return {
-            "total_purchases": total_count,
-            "unique_products": len(unique_products),
-            "date_range": {
-                "oldest": oldest["purchase_date"] if oldest else None,
-                "newest": newest["purchase_date"] if newest else None,
-            },
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
-
-
-# For Vercel
 if __name__ == "__main__":
     import uvicorn
 

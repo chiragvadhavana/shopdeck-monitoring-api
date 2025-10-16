@@ -1,7 +1,3 @@
-"""
-Test script for ShopDeck purchase scraping.
-"""
-
 import os
 import re
 import random
@@ -13,6 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 PRODUCT_URL = os.getenv("PRODUCT_URL", "")
+INTERVAL_MINUTES = int(os.getenv("INTERVAL_MINUTES"))
 
 
 def parse_minutes(time_str: str):
@@ -66,7 +63,7 @@ async def main():
         print("Error: PRODUCT_URL not set in .env file")
         return
 
-    MAX_MINUTES = 40
+    MAX_MINUTES = INTERVAL_MINUTES
     print(f"Testing with {MAX_MINUTES}-minute cap...\n")
 
     purchases = await scrape_purchases(PRODUCT_URL)
@@ -90,11 +87,9 @@ async def main():
 
         if minutes_ago is not None:
             purchase_time = current_time - timedelta(minutes=minutes_ago)
-            status = (
-                "WITHIN WINDOW"
-                if minutes_ago <= MAX_MINUTES
-                else "OUTSIDE WINDOW"
-            )
+            # Round to nearest minute to avoid 1-minute differences
+            purchase_time = purchase_time.replace(second=0, microsecond=0)
+            status = "WITHIN WINDOW" if minutes_ago <= MAX_MINUTES else "OUTSIDE WINDOW"
 
             if minutes_ago <= MAX_MINUTES:
                 within_window += 1
