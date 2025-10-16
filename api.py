@@ -52,13 +52,28 @@ async def scrape_purchases(url: str) -> list:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
     ]
-
+    
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(user_agent=random.choice(user_agents))
+            # Vercel-specific browser launch options
+            browser = await p.chromium.launch(
+                headless=True,
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-accelerated-2d-canvas",
+                    "--no-first-run",
+                    "--no-zygote",
+                    "--disable-gpu"
+                ]
+            )
+            context = await browser.new_context(
+                user_agent=random.choice(user_agents),
+                viewport={"width": 1920, "height": 1080}
+            )
             page = await context.new_page()
-
+            
             async def handle_response(response):
                 nonlocal api_data
                 if "/api/prashth/page/" in response.url and response.status == 200:
@@ -66,24 +81,25 @@ async def scrape_purchases(url: str) -> list:
                         data = await response.json()
                         if data.get("code") == 200:
                             api_data = data
-                    except:
+                    except Exception as e:
+                        print(f"Error parsing response: {e}")
                         pass
-
+            
             page.on("response", handle_response)
-            await page.goto(url, wait_until="networkidle", timeout=30000)
-            await page.wait_for_timeout(2000)
+            await page.goto(url, wait_until="networkidle", timeout=60000)
+            await page.wait_for_timeout(5000)  # Increased wait time for Vercel
             await browser.close()
     except Exception as e:
         print(f"Error scraping: {e}")
         return []
-
+    
     # Extract purchases from API data
     if api_data:
         widgets = api_data.get("data", {}).get("widgets", [])
         for widget in widgets:
             if widget.get("title") == "RECENT PURCHASE":
                 return widget.get("entities", [])
-
+    
     return []
 
 
@@ -147,7 +163,8 @@ async def trigger_monitoring(
     interval_minutes: Optional[int] = None, product_url: Optional[str] = None
 ):
     """Manually trigger purchase monitoring."""
-
+    from urllib.parse import unquote
+    
     if interval_minutes is None:
         interval_minutes = INTERVAL_MINUTES
     else:
@@ -156,7 +173,7 @@ async def trigger_monitoring(
     if product_url is None:
         product_url = PRODUCT_URL
     else:
-        product_url = str(product_url)
+        product_url = unquote(str(product_url))
 
     if not product_url:
         raise HTTPException(status_code=400, detail="PRODUCT_URL not set")
@@ -165,7 +182,9 @@ async def trigger_monitoring(
         raise HTTPException(status_code=500, detail="Database not configured")
 
     try:
+        print(f"Starting scrape for URL: {product_url}")
         purchases = await scrape_purchases(product_url)
+        print(f"Scraped {len(purchases) if purchases else 0} purchases")
 
         if not purchases:
             return TriggerResponse(
@@ -177,6 +196,7 @@ async def trigger_monitoring(
             )
 
         stored_count = store_purchases(purchases, interval_minutes)
+        print(f"Stored {stored_count} purchases")
 
         return TriggerResponse(
             success=True,
