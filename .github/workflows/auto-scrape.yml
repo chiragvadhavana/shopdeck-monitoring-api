@@ -19,23 +19,27 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{
               "product_url": "https://vinayakfashion.co/Khadi-Cotton-A-line-Dress/catalogue/MuBDATc1/7jlKiiGv?source=sales_activity&utm_source=sales_activity",
-              "interval_minutes": 10
+              "interval_minutes": 10,
+              "website_config": {
+                "external_id": "95ae81d618664f65ab353cbde6a1cdb1",
+                "sale_id": "68e0b34f11c117c4630059d0"
+              }
             }')
-          
+
           http_code=$(echo "$response" | tail -n1)
           response_body=$(echo "$response" | head -n -1)
-          
+
           echo "Response (HTTP $http_code):"
           echo "$response_body" | jq '.' 2>/dev/null || echo "$response_body"
-          
+
           if [ "$http_code" -ne 200 ]; then
             echo "❌ Scraping failed"
             exit 1
           fi
-          
+
           records_found=$(echo "$response_body" | jq -r '.records_found // 0' 2>/dev/null || echo "0")
           records_stored=$(echo "$response_body" | jq -r '.records_stored // 0' 2>/dev/null || echo "0")
-          
+
           echo "## Vinayak Fashion Results" >> $GITHUB_STEP_SUMMARY
           echo "- **Records Found**: $records_found" >> $GITHUB_STEP_SUMMARY
           echo "- **Records Stored**: $records_stored" >> $GITHUB_STEP_SUMMARY

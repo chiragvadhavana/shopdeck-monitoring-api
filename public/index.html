@@ -1,92 +1,132 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>ShopDeck Monitor</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; }
-        input, button { padding: 8px; margin: 5px; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        .result { background: #f8f9fa; padding: 10px; margin-top: 10px; font-family: monospace; white-space: pre-wrap; }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+      .section {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid #ddd;
+      }
+      input,
+      button {
+        padding: 8px;
+        margin: 5px;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .result {
+        background: #f8f9fa;
+        padding: 10px;
+        margin-top: 10px;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>ShopDeck Monitor</h1>
-    
+
     <div class="section">
-        <h2>Manual Scraper</h2>
-        <form id="scrapeForm">
-            <div>
-                <label>Product URL:</label><br>
-                <input type="url" id="productUrl" required style="width: 500px;" 
-                       placeholder="https://example.com/product/catalogue/ABC123/XYZ789">
-            </div>
-            <div>
-                <label>Minutes (1-59):</label><br>
-                <input type="number" id="intervalMinutes" min="1" max="59" value="10" style="width: 100px;">
-            </div>
-            <button type="submit">Scrape</button>
-        </form>
-        <div id="scrapeResult"></div>
+      <h2>Manual Scraper</h2>
+      <form id="scrapeForm">
+        <div>
+          <label>Product URL:</label><br />
+          <input
+            type="url"
+            id="productUrl"
+            required
+            style="width: 500px"
+            placeholder="https://example.com/product/catalogue/ABC123/XYZ789"
+          />
+        </div>
+        <div>
+          <label>Minutes (1-59):</label><br />
+          <input
+            type="number"
+            id="intervalMinutes"
+            min="1"
+            max="59"
+            value="10"
+            style="width: 100px"
+          />
+        </div>
+        <button type="submit">Scrape</button>
+      </form>
+      <div id="scrapeResult"></div>
     </div>
 
     <div class="section">
-        <h2>Download Data</h2>
-        <button onclick="downloadCSV()">Download CSV</button>
+      <h2>Download Data</h2>
+      <button onclick="downloadCSV()">Download CSV</button>
     </div>
 
     <script>
-        document.getElementById('scrapeForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const btn = document.querySelector('button[type="submit"]');
-            const result = document.getElementById('scrapeResult');
-            
-            btn.disabled = true;
-            btn.textContent = 'Scraping...';
-            result.innerHTML = 'Loading...';
-            
-            try {
-                const response = await fetch('/api/scrape', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        product_url: document.getElementById('productUrl').value,
-                        interval_minutes: parseInt(document.getElementById('intervalMinutes').value)
-                    })
-                });
-                
-                const data = await response.json();
-                result.innerHTML = JSON.stringify(data, null, 2);
-            } catch (error) {
-                result.innerHTML = 'Error: ' + error.message;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Scrape';
-            }
+      document
+        .getElementById("scrapeForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const btn = document.querySelector('button[type="submit"]');
+          const result = document.getElementById("scrapeResult");
+
+          btn.disabled = true;
+          btn.textContent = "Scraping...";
+          result.innerHTML = "Loading...";
+
+          try {
+            const response = await fetch("/api/scrape", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                product_url: document.getElementById("productUrl").value,
+                interval_minutes: parseInt(
+                  document.getElementById("intervalMinutes").value
+                ),
+              }),
+            });
+
+            const data = await response.json();
+            result.innerHTML = JSON.stringify(data, null, 2);
+          } catch (error) {
+            result.innerHTML = "Error: " + error.message;
+          } finally {
+            btn.disabled = false;
+            btn.textContent = "Scrape";
+          }
         });
 
-        async function downloadCSV() {
-            try {
-                const response = await fetch('/api/export');
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'purchases.csv';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                } else {
-                    alert('Error downloading CSV');
-                }
-            } catch (error) {
-                alert('Error: ' + error.message);
-            }
+      async function downloadCSV() {
+        try {
+          const response = await fetch("/api/export");
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "purchases.csv";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+          } else {
+            alert("Error downloading CSV");
+          }
+        } catch (error) {
+          alert("Error: " + error.message);
         }
+      }
     </script>
-</body>
+  </body>
 </html>

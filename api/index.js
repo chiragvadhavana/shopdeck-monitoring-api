@@ -43,7 +43,7 @@ function extractWebsiteName(url) {
   }
 }
 
-async function scrapePurchases(url) {
+async function scrapePurchases(url, websiteConfig = {}) {
   try {
     console.log(`Scraping URL: ${url}`);
 
@@ -60,13 +60,13 @@ async function scrapePurchases(url) {
     const apiUrl = `https://${baseDomain}/api/prashth/page/${ids.productId}/${ids.skuId}`;
 
     const params = {
-      external_id: "30f011de9b2542ab96b0302e49463db4",
-      fbc: "fb.1.1754997368020.fbclid",
-      fbp: "fb.1.1749556790621.339021267154647244",
-      offer_params: '{"enable":true,"applied_coupon_codes":[],"pre_applied_coupon_codes":[]}',
+      external_id: websiteConfig.external_id || "30f011de9b2542ab96b0302e49463db4",
+      fbc: websiteConfig.fbc || "fb.1.1754997368020.fbclid",
+      fbp: websiteConfig.fbp || "fb.1.1749556790621.339021267154647244",
+      offer_params: websiteConfig.offer_params || '{"enable":true,"applied_coupon_codes":[],"pre_applied_coupon_codes":[]}',
       page_no: 1,
       page_size: 5,
-      sale_id: "68c81b3e891920179d3adab9",
+      sale_id: websiteConfig.sale_id || "68c81b3e891920179d3adab9",
     };
 
     const headers = {
@@ -74,7 +74,8 @@ async function scrapePurchases(url) {
       "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
       Connection: "keep-alive",
       Referer: url,
-      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
+      "User-Agent":
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
       wm_device_type: "mobile",
       wm_image_experiment: "control",
       wm_lang: "en",
@@ -88,12 +89,17 @@ async function scrapePurchases(url) {
       "Sec-Fetch-Dest": "empty",
       "Sec-Fetch-Mode": "cors",
       "Sec-Fetch-Site": "same-origin",
-      Cookie: "__wm_visitor_id=a3cdbd59846343c98a67b0834dac25db; _ga=GA1.1.1516941305.1749556790; _fbp=fb.1.1749556790621.339021267154647244; _fbc=fb.1.1754997368020.fbclid",
+      Cookie:
+        "__wm_visitor_id=a3cdbd59846343c98a67b0834dac25db; _ga=GA1.1.1516941305.1749556790; _fbp=fb.1.1749556790621.339021267154647244; _fbc=fb.1.1754997368020.fbclid",
     };
 
     console.log(`Calling API: ${apiUrl}`);
 
-    const response = await axios.get(apiUrl, { params, headers, timeout: 10000 });
+    const response = await axios.get(apiUrl, {
+      params,
+      headers,
+      timeout: 10000,
+    });
 
     console.log(`API response status: ${response.status}`);
     console.log(`API response code: ${response.data.code}`);
@@ -103,7 +109,10 @@ async function scrapePurchases(url) {
       console.log(`Found ${widgets.length} widgets`);
 
       for (const widget of widgets) {
-        if (widget.title === "RECENT PURCHASE" || widget.title === "RECENT PURCHASES") {
+        if (
+          widget.title === "RECENT PURCHASE" ||
+          widget.title === "RECENT PURCHASES"
+        ) {
           const entities = widget.entities || [];
           console.log(`Found ${entities.length} recent purchases`);
           return entities;
@@ -175,12 +184,15 @@ app.get("/", async (req, res) => {
 
 app.post("/api/trigger", async (req, res) => {
   try {
-    const intervalMinutes = req.body.interval_minutes || req.query.interval_minutes || 10;
+    const intervalMinutes =
+      req.body.interval_minutes || req.query.interval_minutes || 10;
     const productUrl = req.body.product_url || req.query.product_url;
+    const websiteConfig = req.body.website_config || {};
 
     console.log("=== TRIGGER CALLED ===");
     console.log("Product URL:", productUrl);
     console.log("Interval:", intervalMinutes);
+    console.log("Website Config:", websiteConfig);
 
     if (!productUrl) {
       return res.status(400).json({ error: "product_url is required" });
@@ -191,7 +203,7 @@ app.post("/api/trigger", async (req, res) => {
       return res.status(500).json({ error: "Database not configured" });
     }
 
-    const purchases = await scrapePurchases(productUrl);
+    const purchases = await scrapePurchases(productUrl, websiteConfig);
     console.log(`Found ${purchases.length} purchases`);
 
     if (!purchases || purchases.length === 0) {
@@ -206,7 +218,11 @@ app.post("/api/trigger", async (req, res) => {
     }
 
     const websiteName = extractWebsiteName(productUrl);
-    const storedCount = await storePurchases(purchases, parseInt(intervalMinutes), websiteName);
+    const storedCount = await storePurchases(
+      purchases,
+      parseInt(intervalMinutes),
+      websiteName
+    );
     console.log(`Stored ${storedCount} purchases`);
 
     res.json({
@@ -227,7 +243,7 @@ app.post("/api/trigger", async (req, res) => {
 
 app.post("/api/scrape", async (req, res) => {
   try {
-    const { product_url, interval_minutes = 10 } = req.body;
+    const { product_url, interval_minutes = 10, website_config = {} } = req.body;
 
     if (!product_url) {
       return res.status(400).json({ error: "product_url is required" });
@@ -236,8 +252,9 @@ app.post("/api/scrape", async (req, res) => {
     console.log("=== MANUAL SCRAPE CALLED ===");
     console.log("Product URL:", product_url);
     console.log("Interval:", interval_minutes);
+    console.log("Website Config:", website_config);
 
-    const purchases = await scrapePurchases(product_url);
+    const purchases = await scrapePurchases(product_url, website_config);
     console.log(`Found ${purchases.length} purchases`);
 
     if (!purchases || purchases.length === 0) {
@@ -256,7 +273,9 @@ app.post("/api/scrape", async (req, res) => {
       return minutesAgo !== null && minutesAgo <= parseInt(interval_minutes);
     });
 
-    console.log(`Filtered to ${filteredPurchases.length} purchases within ${interval_minutes} minutes`);
+    console.log(
+      `Filtered to ${filteredPurchases.length} purchases within ${interval_minutes} minutes`
+    );
 
     res.json({
       success: true,
@@ -289,13 +308,18 @@ app.get("/api/export", async (req, res) => {
     if (!purchases || purchases.length === 0) {
       const csvData = "Product Name,Product ID,Customer,Date,Time,Website\n";
       res.setHeader("Content-Type", "text/csv");
-      res.setHeader("Content-Disposition", "attachment; filename=purchases.csv");
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=purchases.csv"
+      );
       return res.send(csvData);
     }
 
     const csvLines = ["Product Name,Product ID,Customer,Date,Time,Website"];
     for (const p of purchases) {
-      const line = `"${p.product_name}","${p.product_id}","${p.customer_location}","${p.purchase_date}","${p.purchase_time}","${p.website || ""}"`;
+      const line = `"${p.product_name}","${p.product_id}","${
+        p.customer_location
+      }","${p.purchase_date}","${p.purchase_time}","${p.website || ""}"`;
       csvLines.push(line);
     }
 
