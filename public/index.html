@@ -51,8 +51,9 @@
 
     <div class="section">
       <h2>Scrape Website</h2>
-      <p style="color: #666; font-size: 14px;">
-        Note: external_id and sale_id are now automatically extracted from the product page!
+      <p style="color: #666; font-size: 14px">
+        Note: external_id and sale_id are now automatically extracted from the
+        product page!
       </p>
       <form id="scrapeForm">
         <div>
@@ -112,7 +113,8 @@
             });
 
             const data = await response.json();
-            result.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            result.innerHTML =
+              "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
           } catch (error) {
             result.innerHTML = "Error: " + error.message;
           } finally {

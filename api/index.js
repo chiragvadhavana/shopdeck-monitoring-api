@@ -93,9 +93,7 @@ async function scrapePurchases(url, websiteConfig = {}) {
     // If website_config is not provided or incomplete, try to extract from page
     let config = { ...websiteConfig };
     if (!config.external_id || !config.sale_id) {
-      console.log(
-        "Website config incomplete, extracting from page..."
-      );
+      console.log("Website config incomplete, extracting from page...");
       const extractedConfig = await extractConfigFromPage(url);
       config.external_id = config.external_id || extractedConfig.external_id;
       config.sale_id = config.sale_id || extractedConfig.sale_id;

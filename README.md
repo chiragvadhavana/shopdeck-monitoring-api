@@ -67,12 +67,17 @@ MONGODB_URL=mongodb+srv://user:password@cluster.mongodb.net/shopdeck_monitoring
 
 ### 3. Automated Scraping
 
-The GitHub Actions workflow will automatically:
+The unified GitHub Actions workflow will automatically:
 
 - Run every 10 minutes
-- Scrape the configured product URL
+- Scrape all 5 configured websites in parallel:
+  - Vinayak Fashion
+  - VIP Fashion Store
+  - Rangrasia
+  - Wama Trends
+  - Rajgharana Lifestyle
 - Store new purchases in MongoDB
-- Provide detailed logs and summaries
+- Provide detailed logs and summaries for each website
 
 ## 📊 Database Schema
 
@@ -131,9 +136,7 @@ shopdeck-monitoring-api/
 │   └── index.html        # Web interface
 ├── .github/
 │   └── workflows/
-│       ├── unified-scraper.yml # Unified multi-website scraper
-│       ├── auto-scrape.yml     # Legacy: Vinayak Fashion
-│       └── vipfashion-scraper.yml # Legacy: VIP Fashion
+│       └── unified-scraper.yml # Unified multi-website scraper (5 websites)
 ├── package.json          # Dependencies
 ├── vercel.json          # Vercel config
 └── README.md            # This file

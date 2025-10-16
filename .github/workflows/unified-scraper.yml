@@ -30,7 +30,7 @@ jobs:
       - name: Scrape ${{ matrix.website.name }}
         run: |
           echo "🚀 Scraping ${{ matrix.website.name }}..."
-          
+
           response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_API_URL }}/api/trigger" \
             -H "Content-Type: application/json" \
             -d "{\"product_url\": \"${{ matrix.website.url }}\", \"interval_minutes\": 10}")
@@ -54,4 +54,3 @@ jobs:
           echo "- **Records Stored**: $records_stored" >> $GITHUB_STEP_SUMMARY
           echo "- **Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
           echo "✅ Successfully scraped ${{ matrix.website.name }}"
-
