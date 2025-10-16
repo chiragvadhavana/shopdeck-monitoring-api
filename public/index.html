@@ -27,18 +27,20 @@
         background: #0056b3;
       }
        .result {
-         background: #f8f9fa;
-         padding: 15px;
+         background: #1e1e1e;
+         color: #d4d4d4;
+         padding: 20px;
          margin-top: 10px;
-         font-family: "Courier New", monospace;
-         font-size: 12px;
-         line-height: 1.4;
+         font-family: "Consolas", "Monaco", "Courier New", monospace;
+         font-size: 13px;
+         line-height: 1.5;
          white-space: pre;
-         border: 1px solid #ddd;
-         border-radius: 4px;
-         max-height: 500px;
+         border: 1px solid #333;
+         border-radius: 6px;
+         max-height: 600px;
          overflow-y: auto;
          word-wrap: break-word;
+         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
        }
     </style>
   </head>
@@ -46,7 +48,6 @@
     <h1></h1>
 
     <div class="section">
-      <h2>Manual Scraper</h2>
       <form id="scrapeForm">
         <div>
           <label>Product URL:</label><br />
@@ -105,7 +106,16 @@
             });
 
              const data = await response.json();
-             result.innerHTML = JSON.stringify(data, null, 2);
+             const jsonString = JSON.stringify(data, null, 2);
+             
+             // Simple JSON syntax highlighting
+             const highlighted = jsonString
+               .replace(/(".*?")\s*:/g, '<span style="color: #9cdcfe;">$1</span>:')
+               .replace(/:\s*(".*?")/g, ': <span style="color: #ce9178;">$1</span>')
+               .replace(/:\s*(true|false|null)/g, ': <span style="color: #569cd6;">$1</span>')
+               .replace(/:\s*(\d+)/g, ': <span style="color: #b5cea8;">$1</span>');
+             
+             result.innerHTML = highlighted;
           } catch (error) {
             result.innerHTML = "Error: " + error.message;
           } finally {
