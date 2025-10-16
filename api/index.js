@@ -60,13 +60,13 @@ async function scrapePurchases(url, websiteConfig = {}) {
     const apiUrl = `https://${baseDomain}/api/prashth/page/${ids.productId}/${ids.skuId}`;
 
     const params = {
-      external_id: websiteConfig.external_id || "30f011de9b2542ab96b0302e49463db4",
-      fbc: websiteConfig.fbc || "fb.1.1754997368020.fbclid",
-      fbp: websiteConfig.fbp || "fb.1.1749556790621.339021267154647244",
-      offer_params: websiteConfig.offer_params || '{"enable":true,"applied_coupon_codes":[],"pre_applied_coupon_codes":[]}',
+      external_id: websiteConfig.external_id,
+      fbc: "",
+      fbp: "",
+      offer_params: '{"enable":true,"applied_coupon_codes":[],"pre_applied_coupon_codes":[]}',
       page_no: 1,
       page_size: 5,
-      sale_id: websiteConfig.sale_id || "68c81b3e891920179d3adab9",
+      sale_id: websiteConfig.sale_id,
     };
 
     const headers = {
@@ -243,7 +243,11 @@ app.post("/api/trigger", async (req, res) => {
 
 app.post("/api/scrape", async (req, res) => {
   try {
-    const { product_url, interval_minutes = 10, website_config = {} } = req.body;
+    const {
+      product_url,
+      interval_minutes = 10,
+      website_config = {},
+    } = req.body;
 
     if (!product_url) {
       return res.status(400).json({ error: "product_url is required" });
