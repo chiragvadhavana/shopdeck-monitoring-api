@@ -5,11 +5,12 @@ Real-time purchase monitoring API for ShopDeck websites with automatic scraping 
 ## 🚀 Features
 
 - **Real-time Scraping**: Direct API calls to ShopDeck websites
+- **Automatic Config Extraction**: No need to manually provide external_id and sale_id - they're extracted automatically!
 - **Website Tracking**: Multi-website support with automatic website name extraction
 - **MongoDB Storage**: Persistent storage of purchase data
 - **CSV Export**: Download all stored purchases
 - **Beautiful Web Interface**: FastAPI-style testing interface
-- **GitHub Actions**: Automated scraping every 10 minutes
+- **Unified GitHub Actions**: Single workflow handles multiple websites
 - **Vercel Deployment**: Serverless deployment with free tier support
 
 ## 🌐 Live Demo
@@ -26,7 +27,7 @@ Real-time purchase monitoring API for ShopDeck websites with automatic scraping 
 GET /
 ```
 
-### Trigger Scraping
+### Trigger Scraping (with Auto-Config Extraction)
 
 ```bash
 POST /api/trigger
@@ -34,9 +35,11 @@ Content-Type: application/json
 
 {
   "product_url": "https://vinayakfashion.co/product/catalogue/ABC123/DEF456",
-  "interval_minutes": 40
+  "interval_minutes": 10
 }
 ```
+
+**Note**: The API now automatically extracts `external_id` and `sale_id` from the product page HTML. You don't need to provide them manually!
 
 ### Export Data
 
@@ -123,12 +126,14 @@ npm start
 ```
 shopdeck-monitoring-api/
 ├── api/
-│   └── index.js          # Main API server
+│   └── index.js          # Main API server with auto-config extraction
 ├── public/
 │   └── index.html        # Web interface
 ├── .github/
 │   └── workflows/
-│       └── auto-scrape.yml # GitHub Actions
+│       ├── unified-scraper.yml # Unified multi-website scraper
+│       ├── auto-scrape.yml     # Legacy: Vinayak Fashion
+│       └── vipfashion-scraper.yml # Legacy: VIP Fashion
 ├── package.json          # Dependencies
 ├── vercel.json          # Vercel config
 └── README.md            # This file

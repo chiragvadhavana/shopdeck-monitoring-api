@@ -1,0 +1,57 @@
+name: Unified Website Scraper
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  scrape-all-websites:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        website:
+          - name: "Vinayak Fashion"
+            url: "https://vinayakfashion.co/Khadi-Cotton-A-line-Dress/catalogue/MuBDATc1/7jlKiiGv?source=sales_activity&utm_source=sales_activity"
+          - name: "VIP Fashion Store"
+            url: "https://vipfashionstore.com/Mashroom-Linen-Mul-Cotton-Saree--White./catalogue/iUK1oUsS/XTwuIAbs"
+          - name: "Rangrasia"
+            url: "https://rangrasia.com/Rust-Elegance-Embroidered-Kurta-Set/catalogue/7aE4cRhp/iZoo-Kef"
+          - name: "Wama Trends"
+            url: "https://wamatrendz.in/Blue-Green-Ombre-Co-Ord-Set-for-Women/catalogue/NAHzTDOv/SY5wK3w9"
+          - name: "Rajgharana Lifestyle"
+            url: "https://rajgharanalifestyle.com/Multicolor-Soft-Smooth-Georgette-With-Embroidered-Work-Saree/catalogue/uV7fAg_Z/E04TfFkH"
+      fail-fast: false
+    steps:
+      - name: Scrape ${{ matrix.website.name }}
+        run: |
+          echo "🚀 Scraping ${{ matrix.website.name }}..."
+          
+          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_API_URL }}/api/trigger" \
+            -H "Content-Type: application/json" \
+            -d "{\"product_url\": \"${{ matrix.website.url }}\", \"interval_minutes\": 10}")
+
+          http_code=$(echo "$response" | tail -n1)
+          response_body=$(echo "$response" | head -n -1)
+
+          echo "Response (HTTP $http_code):"
+          echo "$response_body" | jq '.' 2>/dev/null || echo "$response_body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ Scraping failed for ${{ matrix.website.name }}"
+            exit 1
+          fi
+
+          records_found=$(echo "$response_body" | jq -r '.records_found // 0' 2>/dev/null || echo "0")
+          records_stored=$(echo "$response_body" | jq -r '.records_stored // 0' 2>/dev/null || echo "0")
+
+          echo "## ${{ matrix.website.name }} Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Records Found**: $records_found" >> $GITHUB_STEP_SUMMARY
+          echo "- **Records Stored**: $records_stored" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Successfully scraped ${{ matrix.website.name }}"
+

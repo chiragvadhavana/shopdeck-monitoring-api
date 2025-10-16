@@ -43,6 +43,41 @@ function extractWebsiteName(url) {
   }
 }
 
+async function extractConfigFromPage(url) {
+  try {
+    console.log(`Fetching page to extract config: ${url}`);
+    const response = await axios.get(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
+      },
+      timeout: 10000,
+    });
+
+    const html = response.data;
+
+    // Extract sale_event_short_id (sale_id)
+    const saleIdMatch = html.match(/"sale_event_short_id":"([^"]+)"/);
+    const saleId = saleIdMatch ? saleIdMatch[1] : null;
+
+    // Extract sellerId (external_id)
+    const sellerIdMatch = html.match(/"sellerId":"([^"]+)"/);
+    const sellerId = sellerIdMatch ? sellerIdMatch[1] : null;
+
+    console.log(
+      `Extracted from page - external_id: ${sellerId}, sale_id: ${saleId}`
+    );
+
+    return {
+      external_id: sellerId,
+      sale_id: saleId,
+    };
+  } catch (error) {
+    console.error("Error extracting config from page:", error.message);
+    return { external_id: null, sale_id: null };
+  }
+}
+
 async function scrapePurchases(url, websiteConfig = {}) {
   try {
     console.log(`Scraping URL: ${url}`);
@@ -55,18 +90,34 @@ async function scrapePurchases(url, websiteConfig = {}) {
 
     console.log(`Product ID: ${ids.productId}, SKU ID: ${ids.skuId}`);
 
+    // If website_config is not provided or incomplete, try to extract from page
+    let config = { ...websiteConfig };
+    if (!config.external_id || !config.sale_id) {
+      console.log(
+        "Website config incomplete, extracting from page..."
+      );
+      const extractedConfig = await extractConfigFromPage(url);
+      config.external_id = config.external_id || extractedConfig.external_id;
+      config.sale_id = config.sale_id || extractedConfig.sale_id;
+    }
+
+    console.log(
+      `Using config - external_id: ${config.external_id}, sale_id: ${config.sale_id}`
+    );
+
     const urlObj = new URL(url);
     const baseDomain = urlObj.hostname;
     const apiUrl = `https://${baseDomain}/api/prashth/page/${ids.productId}/${ids.skuId}`;
 
     const params = {
-      external_id: websiteConfig.external_id,
+      external_id: config.external_id,
       fbc: "",
       fbp: "",
-      offer_params: '{"enable":true,"applied_coupon_codes":[],"pre_applied_coupon_codes":[]}',
+      offer_params:
+        '{"enable":true,"applied_coupon_codes":[],"pre_applied_coupon_codes":[]}',
       page_no: 1,
       page_size: 5,
-      sale_id: websiteConfig.sale_id,
+      sale_id: config.sale_id,
     };
 
     const headers = {
