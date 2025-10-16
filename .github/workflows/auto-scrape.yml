@@ -2,15 +2,32 @@ name: Auto Scrape ShopDeck Purchases
 
 on:
   schedule:
-    # Run every 10 minutes
+    # Run every 10 minutes (UTC time)
     - cron: "*/10 * * * *"
   workflow_dispatch: # Allow manual triggering
+
+# Ensure the workflow has proper permissions
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   scrape-purchases:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check Required Secrets
+        run: |
+          if [ -z "${{ secrets.VERCEL_API_URL }}" ]; then
+            echo "❌ VERCEL_API_URL secret is not set!"
+            echo "Please go to Settings → Secrets and variables → Actions"
+            echo "Add VERCEL_API_URL with value: https://shopdeck-monitoring-api.vercel.app"
+            exit 1
+          else
+            echo "✅ VERCEL_API_URL secret is configured"
+            echo "API URL: ${{ secrets.VERCEL_API_URL }}"
+          fi
+
       - name: Trigger API Scraping
         run: |
           echo "🛍️ Starting automated ShopDeck purchase scraping..."
