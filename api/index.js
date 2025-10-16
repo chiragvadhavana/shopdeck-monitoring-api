@@ -65,7 +65,10 @@ async function scrapePurchases(url) {
 
     console.log(`Product ID: ${ids.productId}, SKU ID: ${ids.skuId}`);
 
-    const apiUrl = `https://vinayakfashion.co/api/prashth/page/${ids.productId}/${ids.skuId}`;
+    // Extract the base domain from the input URL
+    const urlObj = new URL(url);
+    const baseDomain = urlObj.hostname;
+    const apiUrl = `https://${baseDomain}/api/prashth/page/${ids.productId}/${ids.skuId}`;
 
     const params = {
       external_id: "30f011de9b2542ab96b0302e49463db4",
@@ -90,7 +93,7 @@ async function scrapePurchases(url) {
       wm_lang: "en",
       wm_platform: "web",
       wm_pricing_cohort: "[]",
-      wm_seller_website: "vinayakfashion.co",
+      wm_seller_website: baseDomain,
       wm_theme: "premium",
       wm_video_experiment: "control",
       wm_viewport: "mobile",
@@ -258,7 +261,7 @@ app.post("/api/trigger", async (req, res) => {
 app.post("/api/scrape", async (req, res) => {
   try {
     const { product_url, interval_minutes = 10 } = req.body;
-    
+
     if (!product_url) {
       return res.status(400).json({ error: "product_url is required" });
     }
@@ -281,13 +284,15 @@ app.post("/api/scrape", async (req, res) => {
     }
 
     // Filter purchases based on interval_minutes
-    const filteredPurchases = purchases.filter(purchase => {
+    const filteredPurchases = purchases.filter((purchase) => {
       const timeCta = purchase.time_cta || "";
       const minutesAgo = parseMinutes(timeCta);
       return minutesAgo !== null && minutesAgo <= parseInt(interval_minutes);
     });
 
-    console.log(`Filtered to ${filteredPurchases.length} purchases within ${interval_minutes} minutes`);
+    console.log(
+      `Filtered to ${filteredPurchases.length} purchases within ${interval_minutes} minutes`
+    );
 
     res.json({
       success: true,
