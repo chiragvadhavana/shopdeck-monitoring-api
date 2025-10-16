@@ -1,26 +1,21 @@
-// api/index.js
-require('dotenv').config();
+require("dotenv").config();
 const express = require("express");
-const puppeteer = require("puppeteer-core");
-const chromium = require("@sparticuz/chromium");
 const { MongoClient } = require("mongodb");
+const axios = require("axios");
 
 const app = express();
 app.use(express.json());
 
 // Configuration
 const MONGODB_URL = process.env.MONGODB_URL || "";
-const PRODUCT_URL = process.env.PRODUCT_URL || "";
-const INTERVAL_MINUTES = parseInt(process.env.INTERVAL_MINUTES || "60");
 
-// MongoDB Connection (singleton)
+// MongoDB Connection
 let mongoClient = null;
 let db = null;
 let purchasesCollection = null;
 
 async function getMongoConnection() {
   if (!MONGODB_URL) return null;
-
   if (!mongoClient) {
     mongoClient = new MongoClient(MONGODB_URL);
     await mongoClient.connect();
@@ -32,69 +27,119 @@ async function getMongoConnection() {
 
 // Helper Functions
 function parseMinutes(timeStr) {
-  // Only handle "X minutes ago" format
   const match = timeStr.toLowerCase().match(/(\d+)\s*minutes?\s*ago/);
   return match ? parseInt(match[1]) : null;
 }
 
-async function scrapePurchases(url) {
-  let apiData = null;
-  const userAgents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-  ];
+function extractProductIds(url) {
+  const match = url.match(/catalogue\/([^\/]+)\/([^\/\?]+)/);
+  if (!match) return null;
+  return {
+    productId: match[1],
+    skuId: match[2],
+  };
+}
 
+function extractWebsiteName(url) {
   try {
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+    const urlObj = new URL(url);
+    return urlObj.hostname;
+  } catch (error) {
+    console.error("Error extracting website name:", error.message);
+    return "unknown";
+  }
+}
+
+async function scrapePurchases(url) {
+  try {
+    console.log(`Scraping URL: ${url}`);
+
+    const ids = extractProductIds(url);
+    if (!ids) {
+      console.error("Could not extract product IDs from URL");
+      return [];
+    }
+
+    console.log(`Product ID: ${ids.productId}, SKU ID: ${ids.skuId}`);
+
+    const apiUrl = `https://vinayakfashion.co/api/prashth/page/${ids.productId}/${ids.skuId}`;
+
+    const params = {
+      external_id: "30f011de9b2542ab96b0302e49463db4",
+      fbc: "fb.1.1754997368020.fbclid",
+      fbp: "fb.1.1749556790621.339021267154647244",
+      offer_params:
+        '{"enable":true,"applied_coupon_codes":[],"pre_applied_coupon_codes":[]}',
+      page_no: 1,
+      page_size: 5,
+      sale_id: "68c81b3e891920179d3adab9",
+    };
+
+    const headers = {
+      Accept: "*/*",
+      "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+      Connection: "keep-alive",
+      Referer: url,
+      "User-Agent":
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
+      wm_device_type: "mobile",
+      wm_image_experiment: "control",
+      wm_lang: "en",
+      wm_platform: "web",
+      wm_pricing_cohort: "[]",
+      wm_seller_website: "vinayakfashion.co",
+      wm_theme: "premium",
+      wm_video_experiment: "control",
+      wm_viewport: "mobile",
+      wm_web_version: "1.6",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
+      Cookie:
+        "__wm_visitor_id=a3cdbd59846343c98a67b0834dac25db; _ga=GA1.1.1516941305.1749556790; _fbp=fb.1.1749556790621.339021267154647244; _fbc=fb.1.1754997368020.fbclid",
+    };
+
+    console.log(`Calling API: ${apiUrl}`);
+
+    const response = await axios.get(apiUrl, {
+      params,
+      headers,
+      timeout: 10000,
     });
 
-    const page = await browser.newPage();
-    await page.setUserAgent(
-      userAgents[Math.floor(Math.random() * userAgents.length)]
-    );
-    await page.setViewport({ width: 1920, height: 1080 });
+    console.log(`API response status: ${response.status}`);
+    console.log(`API response code: ${response.data.code}`);
 
-    // Intercept API responses
-    page.on("response", async (response) => {
-      try {
-        const url = response.url();
-        if (url.includes("/api/prashth/page/") && response.status() === 200) {
-          const data = await response.json();
-          if (data.code === 200) {
-            apiData = data;
-          }
-        }
-      } catch (e) {
-        // Ignore parsing errors
-      }
-    });
+    if (response.data && response.data.code === 200) {
+      const widgets = response.data.data?.widgets || [];
+      console.log(`Found ${widgets.length} widgets`);
 
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
-    await page.waitForTimeout(5000);
-    await browser.close();
-
-    // Extract purchases from API data
-    if (apiData) {
-      const widgets = apiData.data?.widgets || [];
       for (const widget of widgets) {
         if (widget.title === "RECENT PURCHASE") {
-          return widget.entities || [];
+          const entities = widget.entities || [];
+          console.log(`Found ${entities.length} recent purchases`);
+          return entities;
         }
       }
+      console.log("No RECENT PURCHASE widget found");
     }
 
     return [];
   } catch (error) {
-    console.error("Scraping error:", error);
+    console.error("Scraping error:", error.message);
+    if (error.response) {
+      console.error(`API returned status: ${error.response.status}`);
+      console.error(`API response:`, error.response.data);
+    }
     return [];
   }
 }
 
-async function storePurchases(purchases, maxMinutes = 60) {
+async function storePurchases(
+  purchases,
+  maxMinutes = 40,
+  websiteName = "unknown"
+) {
   const collection = await getMongoConnection();
   if (!purchases || !collection) return 0;
 
@@ -108,11 +153,11 @@ async function storePurchases(purchases, maxMinutes = 60) {
     if (minutesAgo !== null && minutesAgo <= maxMinutes) {
       const purchaseDateTime = new Date(currentTime - minutesAgo * 60000);
       purchaseDateTime.setSeconds(0, 0);
-
       const purchaseDate = purchaseDateTime.toISOString().split("T")[0];
       const purchaseTime = purchaseDateTime.toTimeString().slice(0, 5);
 
       await collection.insertOne({
+        website_name: websiteName,
         product_name: purchase.product_name || "",
         product_id: purchase.product_short_id || "",
         customer_location: purchase.title || "",
@@ -120,18 +165,15 @@ async function storePurchases(purchases, maxMinutes = 60) {
         purchase_time: purchaseTime,
         created_at: new Date(),
       });
-
       storedCount++;
     }
   }
-
   return storedCount;
 }
 
 // API Endpoints
 app.get("/", async (req, res) => {
   let dbStatus = "not configured";
-
   if (MONGODB_URL) {
     try {
       const collection = await getMongoConnection();
@@ -141,7 +183,6 @@ app.get("/", async (req, res) => {
       dbStatus = `error: ${error.message}`;
     }
   }
-
   res.json({
     status: "healthy",
     database: dbStatus,
@@ -152,14 +193,17 @@ app.get("/", async (req, res) => {
 app.post("/api/trigger", async (req, res) => {
   try {
     const intervalMinutes =
-      req.body.interval_minutes ||
-      req.query.interval_minutes ||
-      INTERVAL_MINUTES;
-    const productUrl =
-      req.body.product_url || req.query.product_url || PRODUCT_URL;
+      req.body.interval_minutes || req.query.interval_minutes || 40;
+    const productUrl = req.body.product_url || req.query.product_url;
+
+    console.log("=== TRIGGER CALLED ===");
+    console.log("Product URL:", productUrl);
+    console.log("Interval:", intervalMinutes);
 
     if (!productUrl) {
-      return res.status(400).json({ error: "PRODUCT_URL not set" });
+      return res
+        .status(400)
+        .json({ error: "product_url parameter is required" });
     }
 
     const collection = await getMongoConnection();
@@ -167,14 +211,17 @@ app.post("/api/trigger", async (req, res) => {
       return res.status(500).json({ error: "Database not configured" });
     }
 
-    console.log(`Starting scrape for URL: ${productUrl}`);
+    const websiteName = extractWebsiteName(productUrl);
+    console.log("Website:", websiteName);
+
     const purchases = await scrapePurchases(productUrl);
-    console.log(`Scraped ${purchases.length} purchases`);
+    console.log(`Found ${purchases.length} purchases`);
 
     if (!purchases || purchases.length === 0) {
       return res.json({
         success: true,
         message: "No purchases found",
+        website: websiteName,
         records_found: 0,
         records_stored: 0,
         all_purchases: [],
@@ -183,19 +230,23 @@ app.post("/api/trigger", async (req, res) => {
 
     const storedCount = await storePurchases(
       purchases,
-      parseInt(intervalMinutes)
+      parseInt(intervalMinutes),
+      websiteName
     );
     console.log(`Stored ${storedCount} purchases`);
 
     res.json({
       success: true,
       message: "Monitoring completed successfully",
+      website: websiteName,
       records_found: purchases.length,
       records_stored: storedCount,
       all_purchases: purchases,
     });
   } catch (error) {
-    console.error("Trigger error:", error);
+    console.error("=== TRIGGER ERROR ===");
+    console.error("Message:", error.message);
+    console.error("Stack:", error.stack);
     res.status(500).json({ error: error.message });
   }
 });
@@ -213,7 +264,7 @@ app.get("/api/export", async (req, res) => {
       .toArray();
 
     if (!purchases || purchases.length === 0) {
-      const csvData = "Product Name,Product ID,Customer,Date,Time\n";
+      const csvData = "Website,Product Name,Product ID,Customer,Date,Time\n";
       res.setHeader("Content-Type", "text/csv");
       res.setHeader(
         "Content-Disposition",
@@ -222,13 +273,13 @@ app.get("/api/export", async (req, res) => {
       return res.send(csvData);
     }
 
-    const csvLines = ["Product Name,Product ID,Customer,Date,Time"];
+    const csvLines = ["Website,Product Name,Product ID,Customer,Date,Time"];
     for (const p of purchases) {
-      const line = `"${p.product_name}","${p.product_id}","${p.customer_location}","${p.purchase_date}","${p.purchase_time}"`;
+      const line = `"${p.website_name}","${p.product_name}","${p.product_id}","${p.customer_location}","${p.purchase_date}","${p.purchase_time}"`;
       csvLines.push(line);
     }
-    const csvData = csvLines.join("\n");
 
+    const csvData = csvLines.join("\n");
     res.setHeader("Content-Type", "text/csv");
     res.setHeader("Content-Disposition", "attachment; filename=purchases.csv");
     res.send(csvData);
