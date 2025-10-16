@@ -31,26 +31,9 @@ async function getMongoConnection() {
 
 // Helper Functions
 function parseMinutes(timeStr) {
-  const lowerTimeStr = timeStr.toLowerCase();
-  
-  // Handle "X minutes ago"
-  const minutesMatch = lowerTimeStr.match(/(\d+)\s*minutes?\s*ago/);
-  if (minutesMatch) {
-    return parseInt(minutesMatch[1]);
-  }
-  
-  // Handle "an hour ago" or "X hours ago"
-  const hourMatch = lowerTimeStr.match(/(\d+)\s*hours?\s*ago/);
-  if (hourMatch) {
-    return parseInt(hourMatch[1]) * 60; // Convert hours to minutes
-  }
-  
-  // Handle "an hour ago" (exact phrase)
-  if (lowerTimeStr.includes("an hour ago")) {
-    return 60; // 1 hour = 60 minutes
-  }
-  
-  return null;
+  // Only handle "X minutes ago" format
+  const match = timeStr.toLowerCase().match(/(\d+)\s*minutes?\s*ago/);
+  return match ? parseInt(match[1]) : null;
 }
 
 async function scrapePurchases(url) {
