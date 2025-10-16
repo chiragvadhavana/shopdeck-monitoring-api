@@ -121,7 +121,10 @@ async function scrapePurchases(url) {
       console.log(`Found ${widgets.length} widgets`);
 
       for (const widget of widgets) {
-        if (widget.title === "RECENT PURCHASE") {
+        if (
+          widget.title === "RECENT PURCHASE" ||
+          widget.title === "RECENT PURCHASES"
+        ) {
           const entities = widget.entities || [];
           console.log(`Found ${entities.length} recent purchases`);
           return entities;
