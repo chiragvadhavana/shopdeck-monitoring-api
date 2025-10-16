@@ -143,7 +143,9 @@ def health_check():
 
 
 @app.post("/trigger", response_model=TriggerResponse)
-async def trigger_monitoring(interval_minutes: Optional[int] = None):
+async def trigger_monitoring(
+    interval_minutes: Optional[int] = None, product_url: Optional[str] = None
+):
     """Manually trigger purchase monitoring."""
 
     if interval_minutes is None:
@@ -151,14 +153,19 @@ async def trigger_monitoring(interval_minutes: Optional[int] = None):
     else:
         interval_minutes = int(interval_minutes)
 
-    if not PRODUCT_URL:
+    if product_url is None:
+        product_url = PRODUCT_URL
+    else:
+        product_url = str(product_url)
+
+    if not product_url:
         raise HTTPException(status_code=400, detail="PRODUCT_URL not set")
 
     if purchases_collection is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
     try:
-        purchases = await scrape_purchases(PRODUCT_URL)
+        purchases = await scrape_purchases(product_url)
 
         if not purchases:
             return TriggerResponse(
