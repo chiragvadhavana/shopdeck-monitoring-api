@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json());
 
 // Serve static files from public directory
-app.use(express.static('public'));
+app.use(express.static("public"));
 
 // Configuration
 const MONGODB_URL = process.env.MONGODB_URL || "";
