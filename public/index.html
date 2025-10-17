@@ -134,7 +134,7 @@
           result.innerHTML = 'Loading...';
 
           try {
-            const response = await fetch('/api/scrape-common', {
+            const response = await fetch('/api/add-website', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
