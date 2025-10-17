@@ -37,7 +37,7 @@
         overflow-y: auto;
       }
       .result pre {
-        font-family: "Courier New", monospace;
+        font-family: 'Courier New', monospace;
         font-size: 12px;
         line-height: 1.4;
         white-space: pre;
@@ -49,7 +49,8 @@
   <body>
     <h1>ShopDeck Monitoring API</h1>
 
-    <div class="section">
+    <!-- Scrape Website -->
+    <!-- <div class="section">
       <h2>Scrape Website</h2>
       <p style="color: #666; font-size: 14px">
         Note: external_id and sale_id are now automatically extracted from the
@@ -80,69 +81,193 @@
         <button type="submit">Scrape</button>
       </form>
       <div id="scrapeResult"></div>
+    </div> -->
+
+    <!-- Download Data -->
+
+    <!-- Add Website Form -->
+    <div class="section">
+      <h2>Add Website to Monitor</h2>
+      <h4>Example: https://example.com/PRODUCT_PAGE</h4>
+      <form id="addWebsiteForm">
+        <div>
+          <label>Website URL:</label><br />
+          <input
+            type="url"
+            id="websiteUrl"
+            required
+            style="width: 500px"
+            placeholder="https://example.com/product/catalogue/ABC123/XYZ789"
+          />
+        </div>
+        <button type="submit">Add Website</button>
+      </form>
+      <div id="addWebsiteResult"></div>
     </div>
 
     <div class="section">
       <h2>Download Data</h2>
       <button onclick="downloadCSV()">Download CSV</button>
     </div>
+    <!-- Websites Being Monitored -->
+    <div class="section">
+      <h2>Websites Being Monitored</h2>
+      <button onclick="loadMonitoredWebsites()">Refresh List</button>
+      <div id="websitesList">
+        <p style="color: #666">
+          Click "Refresh List" to load monitored websites...
+        </p>
+      </div>
+    </div>
 
     <script>
       document
-        .getElementById("scrapeForm")
-        .addEventListener("submit", async (e) => {
+        .getElementById('scrapeForm')
+        .addEventListener('submit', async (e) => {
           e.preventDefault();
 
           const btn = document.querySelector('button[type="submit"]');
-          const result = document.getElementById("scrapeResult");
+          const result = document.getElementById('scrapeResult');
 
           btn.disabled = true;
-          btn.textContent = "Scraping...";
-          result.innerHTML = "Loading...";
+          btn.textContent = 'Scraping...';
+          result.innerHTML = 'Loading...';
 
           try {
-            const response = await fetch("/api/scrape", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
+            const response = await fetch('/api/scrape-common', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                product_url: document.getElementById("productUrl").value,
+                product_url: document.getElementById('productUrl').value,
                 interval_minutes: parseInt(
-                  document.getElementById("intervalMinutes").value
+                  document.getElementById('intervalMinutes').value
                 ),
               }),
             });
 
             const data = await response.json();
             result.innerHTML =
-              "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+              '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
           } catch (error) {
-            result.innerHTML = "Error: " + error.message;
+            result.innerHTML = 'Error: ' + error.message;
           } finally {
             btn.disabled = false;
-            btn.textContent = "Scrape";
+            btn.textContent = 'Scrape';
           }
         });
 
       async function downloadCSV() {
         try {
-          const response = await fetch("/api/export");
+          const response = await fetch('/api/export');
           if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
+            const a = document.createElement('a');
             a.href = url;
-            a.download = "purchases.csv";
+            a.download = 'purchases.csv';
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
           } else {
-            alert("Error downloading CSV");
+            alert('Error downloading CSV');
           }
         } catch (error) {
-          alert("Error: " + error.message);
+          alert('Error: ' + error.message);
         }
       }
+      async function loadMonitoredWebsites() {
+        const container = document.getElementById('websitesList');
+        container.innerHTML = '<p style="color: #666;">Loading...</p>';
+
+        try {
+          const response = await fetch('/api/monitored-websites');
+          const data = await response.json();
+          console.info('Monitored websites data:', data);
+          if (data.success && data.websites.length > 0) {
+            const listHTML = `
+        <p style="margin-bottom: 10px;"><strong>Total: ${
+          data.websites.length
+        } websites</strong></p>
+        <ul style="list-style: none; padding: 0;">
+          ${data.websites
+            .map(
+              (site) => `
+            <li style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-left: 3px solid #007bff;">
+              <strong>${site.host}</strong><br>
+              <small style="color: #666;">
+                Last scraped: ${
+                  site.lastScraped
+                    ? new Date(site.lastScraped).toLocaleString('en-IN', {
+                        timeZone: 'Asia/Kolkata',
+                      })
+                    : 'Never'
+                } | 
+                Total purchases: ${site.totalPurchases}
+              </small>
+            </li>
+          `
+            )
+            .join('')}
+        </ul>
+      `;
+            container.innerHTML = listHTML;
+          } else {
+            container.innerHTML =
+              '<p style="color: #666;">No websites being monitored yet.</p>';
+          }
+        } catch (error) {
+          container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+        }
+      }
+
+      // Auto-load on page load
+      window.addEventListener('DOMContentLoaded', loadMonitoredWebsites);
+
+      document
+        .getElementById('addWebsiteForm')
+        .addEventListener('submit', async (e) => {
+          e.preventDefault();
+
+          const btn = e.target.querySelector('button[type="submit"]');
+          const result = document.getElementById('addWebsiteResult');
+
+          btn.disabled = true;
+          btn.textContent = 'Adding...';
+          result.innerHTML = 'Loading...';
+
+          try {
+            const response = await fetch('/api/add-website', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                website_url: document.getElementById('websiteUrl').value,
+              }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              result.innerHTML = `<div style="color: green; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; margin-top: 10px;">
+          ${data.message}
+        </div>`;
+              document.getElementById('websiteUrl').value = '';
+              // Refresh the monitored websites list
+              setTimeout(() => loadMonitoredWebsites(), 500);
+            } else {
+              result.innerHTML = `<div style="color: red; padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; margin-top: 10px;">
+          Error: ${data.error || data.message}
+        </div>`;
+            }
+          } catch (error) {
+            result.innerHTML = `<div style="color: red; padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; margin-top: 10px;">
+        Error: ${error.message}
+      </div>`;
+          } finally {
+            btn.disabled = false;
+            btn.textContent = 'Add Website';
+          }
+        });
     </script>
   </body>
 </html>
